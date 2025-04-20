@@ -1,0 +1,60 @@
+name: 🛠️ Backend Task Template
+description: Template for creating backend engineering tasks for ReTrackLogistics.
+title: "[Task] <Short Description of the Task>"
+labels: [backend, task]
+assignees: []
+
+body:
+  - type: dropdown
+    attributes:
+      label: 🧱 Epic
+      description: Which larger Epic does this task fall under?
+      options:
+        - Project Setup & Core Architecture
+        - Shipments & Asset Management
+        - Locations Management
+        - GPS Tracking & Event Automation
+        - Tracking Event System
+        - ETA Estimation Engine
+        - Roles & Permissions
+        - Developer Experience & Docs
+    validations:
+      required: true
+
+  - type: input
+    attributes:
+      label: 🧩 Task Summary
+      description: A short summary of what this task will implement or complete.
+      placeholder: e.g. Create Shipment model and serializers
+    validations:
+      required: true
+
+  - type: textarea
+    attributes:
+      label: 💡 Context
+      description: Provide any context, background, or references to related issues or designs.
+      placeholder: Why is this task needed? How does it support the MVP or Epic?
+    validations:
+      required: false
+
+  - type: checkboxes
+    attributes:
+      label: ✅ Subtasks
+      description: Break the task into 2-5 steps that should be done in this branch.
+      options:
+        - label: Define or update the Django model(s)
+        - label: Create serializers and viewsets
+        - label: Register route in `urls.py`
+        - label: Write unit tests
+        - label: Add sample payloads to API docs
+        - label: Test locally with Postman or Swagger
+
+  - type: input
+    attributes:
+      label: 🌿 Suggested Branch Name
+      placeholder: feature/create-shipment-model
+
+  - type: textarea
+    attributes:
+      label: 📝 Notes or Dependencies
+      description: Mention any blockers, API dependencies, or related issues.
