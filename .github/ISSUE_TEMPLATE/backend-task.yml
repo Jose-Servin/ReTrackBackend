@@ -37,18 +37,6 @@ body:
     validations:
       required: false
 
-  - type: checkboxes
-    attributes:
-      label: ✅ Subtasks
-      description: Break the task into 2-5 steps that should be done in this branch.
-      options:
-        - label: Define or update the Django model(s)
-        - label: Create serializers and viewsets
-        - label: Register route in `urls.py`
-        - label: Write unit tests
-        - label: Add sample payloads to API docs
-        - label: Test locally with Postman or Swagger
-
   - type: input
     attributes:
       label: 🌿 Suggested Branch Name
