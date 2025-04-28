@@ -11,6 +11,7 @@ This is my personal sandbox for experimenting with full-stack backend architectu
 > This is a backend-focused, multi-tenant SaaS project built in Django and Django REST Framework. The project is designed to simulate how a modern shipment tracking system might work in the real world — with GPS pings, carrier data, and predictive ETAs.
 
 I’m using it as a way to sharpen my skills in:
+
 - Backend architecture and API design (Django + DRF)
 - Geospatial and location-aware systems
 - Real-time data ingestion and processing
@@ -34,16 +35,12 @@ I’m using it as a way to sharpen my skills in:
 
 ## 🔑 Core Features
 
-✅ **JWT-based Auth & Multi-Tenant Support**  
-✅ **Shipments with Origin & Destination Locations**  
-✅ **Driver, Carrier, and Vehicle Management**  
-✅ **Real-Time GPS Pings Ingestion**  
-✅ **Geofencing & Event Triggering**  
-✅ **Shipment Timeline with Milestone Events**  
-✅ **ETA Calculation and Trend Tracking**  
-✅ **Organization-based data isolation**  
-✅ **Role-based access (Admin, Operator, Driver, Viewer)**  
-✅ **RESTful API (DRF) + Swagger-ready docs**
+✅ **Real-Time GPS Ping and Event Ingestion**  
+✅ **Flexible API for Device and Asset Tracking**  
+✅ **Role-Based Access Control (Admin, Operator, Device, Viewer)**  
+✅ **Event-Driven Tracking System (Milestones, Status Changes, Anomalies)**  
+✅ **Mock Device Simulation via Python Scripts**  
+✅ **Cloud-Ready for AWS ECS and Future Streaming Pipelines**  
 
 ---
 
@@ -56,6 +53,20 @@ I’m using it as a way to sharpen my skills in:
 - Optional: **Celery + Redis** for background tasking (e.g., ETA updates)
 
 ---
+
+## 📈 Platform Focus: IoT Event Ingestion and Data Engineering
+
+ReTrackLogistics applies its core functionality to logistics tracking, but the underlying architecture is designed as a general-purpose IoT event ingestion platform.
+
+The system is designed around the following core principles:
+
+- **Real-Time Event Capture:** High-throughput ingestion of GPS pings and device events from distributed sources
+- **Device Activity Modeling:** Standardized event and status tracking for assets, abstracted from specific industries
+- **Geospatial and Temporal Data Management:** Structuring and querying location and event data efficiently for real-time and analytical use cases
+- **Cloud-Native Simulation:** Mocking device behavior through Python scripts and scheduled AWS ECS tasks for scalable development and testing
+- **Future Pipeline Enhancements:** Laying groundwork for streaming ingestion (e.g., Kafka, Kinesis), event-driven automations (e.g., serverless triggers), and predictive analytics (e.g., ETA forecasting, anomaly detection)
+
+ReTrackLogistics is designed to be a flexible platform for real-time IoT tracking, event-driven workflows, and data pipeline experimentation — with a focus on scalable event ingestion and real-world device simulation.
 
 ## ⚠️ Disclaimer
 
