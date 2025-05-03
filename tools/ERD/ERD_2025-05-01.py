@@ -1,18 +1,35 @@
+"""
+ERD generated on 2025-05-01
+
+This diagram corresponds to the initial seed data defined in `seed_shipments_v1.sql`.
+It represents the simplified version of the data model we're starting with and is
+intended for early development and learning purposes. This is not the final schema —
+models and relationships will evolve over time.
+"""
+
 from graphviz import Digraph
 import os
 
 dot = Digraph(comment="ReTrackLogistics ERD", format="png")
+dot.attr(rankdir="RL")
+dot.attr(size="12,6")
+dot.attr(dpi="200")
 
-# Define entity shapes
 entities = {
-    "Carrier": ["id", "name", "mc_number", "created_at", "updated_at"],
+    "Carrier": [
+        "id",
+        "name",
+        "mc_number",
+        "created_at",
+        "updated_at",
+    ],
     "CarrierContact": [
         "id",
         "carrier_id → Carrier",
         "first_name",
         "last_name",
         "email",
-        "phone",
+        "phone_number",
         "role",
         "is_primary",
         "created_at",
@@ -38,8 +55,8 @@ entities = {
     ],
     "Shipment": [
         "id",
-        "origin_id → Location",
-        "destination_id → Location",
+        "origin",
+        "destination",
         "scheduled_pickup",
         "scheduled_delivery",
         "actual_pickup",
@@ -55,13 +72,14 @@ entities = {
         "id",
         "shipment_id → Shipment",
         "status",
-        "timestamp",
+        "event_timestamp",
         "source",
         "notes",
+        "created_at",
+        "updated_at",
     ],
 }
 
-# Create nodes
 for entity, fields in entities.items():
     label = f"<<TABLE BORDER='0' CELLBORDER='1' CELLSPACING='0'>"
     label += f"<TR><TD BGCOLOR='lightblue'><B>{entity}</B></TD></TR>"
@@ -70,7 +88,6 @@ for entity, fields in entities.items():
     label += "</TABLE>>"
     dot.node(entity, label=label, shape="plain")
 
-# Define relationships
 edges = [
     ("CarrierContact", "Carrier"),
     ("Driver", "Carrier"),
@@ -79,19 +96,12 @@ edges = [
     ("Shipment", "Driver"),
     ("Shipment", "Vehicle"),
     ("ShipmentStatusEvent", "Shipment"),
-    ("Shipment", "Location"),  # For both origin and destination
 ]
 
-# Add edges
 for source, target in edges:
     dot.edge(source, target)
 
-# Save or render
-# dot.render("retrack_erd", view=True)
+erd_path = "ERD_2025-05-01"
+dot.render(erd_path, format="png", cleanup=True)
 
-# Render diagram
-os.makedirs("diagrams", exist_ok=True)
-erd_image_path = "diagrams/Current_retrack_ERD"
-dot.render(erd_image_path, format="png", cleanup=True)
-
-erd_image_path
+print(f"ERD generated at {erd_path}.png")
