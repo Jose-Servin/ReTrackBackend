@@ -4,15 +4,10 @@ from django.utils import timezone
 
 
 class Carrier(models.Model):
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     name = models.CharField(max_length=255)
     mc_number = models.CharField(max_length=50, null=True, blank=True)
-    account_managers = models.ManyToManyField(
-        "core.User",
-        related_name="managed_carriers",
-        blank=True,
-        help_text="ReTrack internal users managing this carrier",
-    )
+    # TODO: replace with FK to core.User when model is defined
+    # account_managers
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -27,7 +22,6 @@ class CarrierContact(models.Model):
         BILLING = "BILLING", "Billing"
         SAFETY = "SAFETY", "Safety"
 
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     carrier = models.ForeignKey(
         "Carrier", on_delete=models.CASCADE, related_name="contacts"
     )
@@ -59,7 +53,6 @@ class CarrierContact(models.Model):
 
 
 class Driver(models.Model):
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     first_name = models.CharField(max_length=255)
     last_name = models.CharField(max_length=255)
     phone_number = models.CharField(max_length=20, blank=True)
@@ -75,7 +68,6 @@ class Driver(models.Model):
 
 
 class Vehicle(models.Model):
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     carrier = models.ForeignKey(
         Carrier, on_delete=models.CASCADE, related_name="vehicles"
     )
@@ -95,8 +87,6 @@ class ShipmentStatusEvent(models.Model):
         DELIVERED = "delivered", "Delivered"
         DELAYED = "delayed", "Delayed"
         CANCELLED = "cancelled", "Cancelled"
-
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
 
     shipment = models.ForeignKey(
         "Shipment", on_delete=models.PROTECT, related_name="status_events"
@@ -118,17 +108,10 @@ class ShipmentStatusEvent(models.Model):
 
 
 class Shipment(models.Model):
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-
-    origin = models.ForeignKey(
-        "locations.Location", related_name="shipments_origin", on_delete=models.PROTECT
-    )
-    destination = models.ForeignKey(
-        "locations.Location",
-        related_name="shipments_destination",
-        on_delete=models.PROTECT,
-    )
-
+    # TODO: replace with FK to Location when model is defined
+    origin = models.CharField(max_length=255)
+    # TODO: replace with FK to Location when model is defined
+    destination = models.CharField(max_length=255)
     scheduled_pickup = models.DateTimeField()
     scheduled_delivery = models.DateTimeField()
     actual_pickup = models.DateTimeField(null=True, blank=True)
@@ -153,6 +136,7 @@ class Shipment(models.Model):
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+    slug = models.SlugField()
 
     def __str__(self):
         return f"Shipment {self.id} ({self.current_status})"
