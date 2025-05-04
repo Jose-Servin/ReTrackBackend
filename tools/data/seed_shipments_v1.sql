@@ -8,6 +8,25 @@ VALUES
 ('BlueRoute Express', 'MC999999', NOW(), NOW()),      -- id = 3
 ('Midwest Movers', 'MC777777', NOW(), NOW());         -- id = 4
 
+-- Carrier Contacts (2 per carrier)
+INSERT INTO public.shipments_carriercontact (
+    carrier_id, first_name, last_name, email, phone_number,
+    role, is_primary, created_at, updated_at
+)
+VALUES
+-- Carrier 1
+(1, 'Maria', 'Lopez', 'maria.lopez@swift.com', '555-2001', 'OWNER', true, NOW(), NOW()),
+(1, 'Daniel', 'King', 'daniel.king@swift.com', '555-2002', 'DISPATCH', false, NOW(), NOW()),
+-- Carrier 2
+(2, 'Angela', 'Bennett', 'angela.bennett@fastlane.com', '555-2003', 'OWNER', true, NOW(), NOW()),
+(2, 'Tom', 'Peters', 'tom.peters@fastlane.com', '555-2004', 'BILLING', false, NOW(), NOW()),
+-- Carrier 3
+(3, 'Ravi', 'Singh', 'ravi.singh@blueroute.com', '555-2005', 'OWNER', true, NOW(), NOW()),
+(3, 'Elena', 'Morales', 'elena.morales@blueroute.com', '555-2006', 'SAFETY', false, NOW(), NOW()),
+-- Carrier 4
+(4, 'Grace', 'Chen', 'grace.chen@midwest.com', '555-2007', 'OWNER', true, NOW(), NOW()),
+(4, 'Omar', 'Johnson', 'omar.johnson@midwest.com', '555-2008', 'DISPATCH', false, NOW(), NOW());
+
 -- Drivers
 select * from public.shipments_driver;
 
@@ -66,54 +85,54 @@ VALUES
 
 select * from public.shipments_shipmentstatusevent;
 
-INSERT INTO public.shipments_shipmentstatusevent (shipment_id, status, event_timestamp, source, notes, created_at, updated_at)
+INSERT INTO public.shipments_shipmentstatusevent (shipment_id, status, event_timestamp, source, created_at, updated_at)
 VALUES
 -- Shipment 1
-(1, 'pending', NOW() - INTERVAL '3 days', 'system', 'Created', NOW() - INTERVAL '3 days', NOW() - INTERVAL '3 days'),
-(1, 'in_transit', NOW() - INTERVAL '2 days', 'system', 'Picked up', NOW() - INTERVAL '2 days', NOW() - INTERVAL '2 days'),
-(1, 'delivered', NOW(), 'system', 'Delivered on time', NOW(), NOW()),
+(1, 'pending', NOW() - INTERVAL '3 days', 'system', NOW() - INTERVAL '3 days', NOW() - INTERVAL '3 days'),
+(1, 'in_transit', NOW() - INTERVAL '2 days', 'system', NOW() - INTERVAL '2 days', NOW() - INTERVAL '2 days'),
+(1, 'delivered', NOW(), 'system', NOW(), NOW()),
 
 -- Shipment 2
-(2, 'pending', NOW() - INTERVAL '2 days', 'system', 'Created', NOW() - INTERVAL '2 days', NOW() - INTERVAL '2 days'),
-(2, 'in_transit', NOW() - INTERVAL '1 day', 'system', 'En route', NOW() - INTERVAL '1 day', NOW() - INTERVAL '1 day'),
-(2, 'delivered', NOW(), 'system', 'Delivered early', NOW(), NOW()),
+(2, 'pending', NOW() - INTERVAL '2 days', 'system', NOW() - INTERVAL '2 days', NOW() - INTERVAL '2 days'),
+(2, 'in_transit', NOW() - INTERVAL '1 day', 'system', NOW() - INTERVAL '1 day', NOW() - INTERVAL '1 day'),
+(2, 'delivered', NOW(), 'system', NOW(), NOW()),
 
 -- Shipment 3
-(3, 'pending', NOW() - INTERVAL '4 days', 'system', 'Created', NOW() - INTERVAL '4 days', NOW() - INTERVAL '4 days'),
-(3, 'in_transit', NOW() - INTERVAL '2 days', 'system', 'Left depot', NOW() - INTERVAL '2 days', NOW() - INTERVAL '2 days'),
-(3, 'delivered', NOW(), 'system', 'Delivered', NOW(), NOW()),
+(3, 'pending', NOW() - INTERVAL '4 days', 'system', NOW() - INTERVAL '4 days', NOW() - INTERVAL '4 days'),
+(3, 'in_transit', NOW() - INTERVAL '2 days', 'system', NOW() - INTERVAL '2 days', NOW() - INTERVAL '2 days'),
+(3, 'delivered', NOW(), 'system', NOW(), NOW()),
 
 -- Shipment 4
-(4, 'pending', NOW() - INTERVAL '2 days', 'system', 'Created', NOW() - INTERVAL '2 days', NOW() - INTERVAL '2 days'),
-(4, 'in_transit', NOW() - INTERVAL '1 day', 'system', 'In transit', NOW() - INTERVAL '1 day', NOW() - INTERVAL '1 day'),
-(4, 'delayed', NOW(), 'system', 'Stuck in traffic', NOW(), NOW()),
+(4, 'pending', NOW() - INTERVAL '2 days', 'system', NOW() - INTERVAL '2 days', NOW() - INTERVAL '2 days'),
+(4, 'in_transit', NOW() - INTERVAL '1 day', 'system', NOW() - INTERVAL '1 day', NOW() - INTERVAL '1 day'),
+(4, 'delayed', NOW(), 'system', NOW(), NOW()),
 
 -- Shipment 5
-(5, 'pending', NOW() - INTERVAL '1 day', 'system', 'Created', NOW() - INTERVAL '1 day', NOW() - INTERVAL '1 day'),
-(5, 'in_transit', NOW() - INTERVAL '12 hours', 'system', 'In transit', NOW() - INTERVAL '12 hours', NOW() - INTERVAL '12 hours'),
-(5, 'delayed', NOW(), 'system', 'Weather delay', NOW(), NOW()),
+(5, 'pending', NOW() - INTERVAL '1 day', 'system', NOW() - INTERVAL '1 day', NOW() - INTERVAL '1 day'),
+(5, 'in_transit', NOW() - INTERVAL '12 hours', 'system', NOW() - INTERVAL '12 hours', NOW() - INTERVAL '12 hours'),
+(5, 'delayed', NOW(), 'system', NOW(), NOW()),
 
 -- Shipment 6
-(6, 'pending', NOW() - INTERVAL '2 days', 'system', 'Created', NOW() - INTERVAL '2 days', NOW() - INTERVAL '2 days'),
-(6, 'in_transit', NOW() - INTERVAL '1 day', 'system', 'Dispatched', NOW() - INTERVAL '1 day', NOW() - INTERVAL '1 day'),
-(6, 'cancelled', NOW(), 'system', 'Customer cancelled', NOW(), NOW()),
+(6, 'pending', NOW() - INTERVAL '2 days', 'system', NOW() - INTERVAL '2 days', NOW() - INTERVAL '2 days'),
+(6, 'in_transit', NOW() - INTERVAL '1 day', 'system', NOW() - INTERVAL '1 day', NOW() - INTERVAL '1 day'),
+(6, 'cancelled', NOW(), 'system', NOW(), NOW()),
 
 -- Shipment 7
-(7, 'pending', NOW() - INTERVAL '1 day', 'system', 'Created', NOW() - INTERVAL '1 day', NOW() - INTERVAL '1 day'),
-(7, 'in_transit', NOW() - INTERVAL '10 hours', 'system', 'En route', NOW() - INTERVAL '10 hours', NOW() - INTERVAL '10 hours'),
-(7, 'cancelled', NOW(), 'system', 'Vehicle issue', NOW(), NOW()),
+(7, 'pending', NOW() - INTERVAL '1 day', 'system', NOW() - INTERVAL '1 day', NOW() - INTERVAL '1 day'),
+(7, 'in_transit', NOW() - INTERVAL '10 hours', 'system', NOW() - INTERVAL '10 hours', NOW() - INTERVAL '10 hours'),
+(7, 'cancelled', NOW(), 'system', NOW(), NOW()),
 
 -- Shipment 8
-(8, 'pending', NOW() - INTERVAL '1 day', 'system', 'Created', NOW() - INTERVAL '1 day', NOW() - INTERVAL '1 day'),
-(8, 'in_transit', NOW() - INTERVAL '12 hours', 'system', 'In transit', NOW() - INTERVAL '12 hours', NOW() - INTERVAL '12 hours'),
-(8, 'delivered', NOW(), 'system', 'Delivered early', NOW(), NOW()),
+(8, 'pending', NOW() - INTERVAL '1 day', 'system', NOW() - INTERVAL '1 day', NOW() - INTERVAL '1 day'),
+(8, 'in_transit', NOW() - INTERVAL '12 hours', 'system', NOW() - INTERVAL '12 hours', NOW() - INTERVAL '12 hours'),
+(8, 'delivered', NOW(), 'system', NOW(), NOW()),
 
 -- Shipment 9
-(9, 'pending', NOW() - INTERVAL '1 day', 'system', 'Created', NOW() - INTERVAL '1 day', NOW() - INTERVAL '1 day'),
-(9, 'in_transit', NOW() - INTERVAL '5 hours', 'system', 'En route', NOW() - INTERVAL '5 hours', NOW() - INTERVAL '5 hours'),
-(9, 'delayed', NOW(), 'system', 'Road closure', NOW(), NOW()),
+(9, 'pending', NOW() - INTERVAL '1 day', 'system', NOW() - INTERVAL '1 day', NOW() - INTERVAL '1 day'),
+(9, 'in_transit', NOW() - INTERVAL '5 hours', 'system', NOW() - INTERVAL '5 hours', NOW() - INTERVAL '5 hours'),
+(9, 'delayed', NOW(), 'system', NOW(), NOW()),
 
 -- Shipment 10
-(10, 'pending', NOW() - INTERVAL '2 days', 'system', 'Created', NOW() - INTERVAL '2 days', NOW() - INTERVAL '2 days'),
-(10, 'in_transit', NOW() - INTERVAL '1 day', 'system', 'In transit', NOW() - INTERVAL '1 day', NOW() - INTERVAL '1 day'),
-(10, 'delivered', NOW(), 'system', 'Delivered', NOW(), NOW());
+(10, 'pending', NOW() - INTERVAL '2 days', 'system', NOW() - INTERVAL '2 days', NOW() - INTERVAL '2 days'),
+(10, 'in_transit', NOW() - INTERVAL '1 day', 'system', NOW() - INTERVAL '1 day', NOW() - INTERVAL '1 day'),
+(10, 'delivered', NOW(), 'system', NOW(), NOW());

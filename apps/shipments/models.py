@@ -14,6 +14,9 @@ class Carrier(models.Model):
     def __str__(self):
         return self.name
 
+    class Meta:
+        ordering = ["name"]
+
 
 class CarrierContact(models.Model):
     class Role(models.TextChoices):
@@ -99,7 +102,6 @@ class ShipmentStatusEvent(models.Model):
         null=True,
         help_text="System or user that triggered this status change",
     )
-    notes = models.TextField(blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -139,7 +141,7 @@ class Shipment(models.Model):
     slug = models.SlugField()
 
     def __str__(self):
-        return f"Shipment {self.id} ({self.current_status})"
+        return f"{self.origin} → {self.destination} [{self.current_status}]"
 
     def update_status(self, new_status, source=None, notes=None, event_timestamp=None):
         event = ShipmentStatusEvent.objects.create(
