@@ -52,7 +52,6 @@ INSTALLED_APPS = [
     "debug_toolbar",
     "apps.core",
     "apps.shipments",
-    "apps.notes",
 ]
 
 MIDDLEWARE = [
