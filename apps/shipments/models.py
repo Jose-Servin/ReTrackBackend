@@ -143,13 +143,12 @@ class Shipment(models.Model):
     def __str__(self):
         return f"{self.origin} → {self.destination} [{self.current_status}]"
 
-    def update_status(self, new_status, source=None, notes=None, event_timestamp=None):
+    def update_status(self, new_status, source=None, event_timestamp=None):
         event = ShipmentStatusEvent.objects.create(
             shipment=self,
             status=new_status,
             event_timestamp=event_timestamp or timezone.now(),
             source=source,
-            notes=notes,
         )
 
         self.current_status = new_status
