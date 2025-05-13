@@ -83,6 +83,48 @@ class Vehicle(models.Model):
         return f"{self.carrier.name} - {self.plate_number}"
 
 
+class Asset(models.Model):
+    """
+    Represents a physical item or good that can be shipped.
+
+    Attributes:
+        name (str): The name or identifier of the asset.
+        slug (SlugField): A URL-friendly label used to reference the asset.
+        description (str): Optional detailed information about the asset.
+        weight_lb (Decimal): The weight of a single unit in pounds.
+        length_in (Decimal): The length of the asset in inches.
+        width_in (Decimal): The width of the asset in inches.
+        height_in (Decimal): The height of the asset in inches.
+        is_fragile (bool): Indicates whether the asset requires special handling due to fragility.
+        is_hazardous (bool): Indicates whether the asset is considered hazardous material.
+        created_at (DateTime): Timestamp when the asset was first created.
+        updated_at (DateTime): Timestamp of the most recent update to the asset.
+    """
+
+    name = models.CharField(max_length=255)
+    description = models.TextField(blank=True)
+    slug = models.SlugField()
+    weight_lb = models.DecimalField(
+        max_digits=7, decimal_places=2, help_text="Weight of a single unit in pounds"
+    )
+    length_in = models.DecimalField(
+        max_digits=7, decimal_places=2, help_text="Length of the item in inches"
+    )
+    width_in = models.DecimalField(
+        max_digits=7, decimal_places=2, help_text="Width of the item in inches"
+    )
+    height_in = models.DecimalField(
+        max_digits=7, decimal_places=2, help_text="Height of the item in inches"
+    )
+    is_fragile = models.BooleanField(default=False)
+    is_hazardous = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return self.name
+
+
 class ShipmentStatusEvent(models.Model):
     class Status(models.TextChoices):
         PENDING = "pending", "Pending"
@@ -173,3 +215,42 @@ class Shipment(models.Model):
             ]
         )
         return event
+
+
+class ShipmentItem(models.Model):
+    """
+    Represents a specific asset included in a shipment.
+
+    Attributes:
+        shipment (ForeignKey): A reference to the Shipment that this item is part of.
+            - Deleting the shipment will also delete all associated shipment items.
+        asset (ForeignKey): The asset being shipped.
+            - Protected to prevent deletion of the asset if referenced in any shipment.
+        quantity (int): The number of units of the asset included in the shipment.
+        unit_weight_lb (Decimal): The recorded weight per unit at the time of shipment, in pounds.
+            - This value is snapshotted from the Asset model to preserve historical accuracy.
+        notes (str): Optional notes or comments related to this shipment item (e.g., "damaged packaging").
+
+    Methods:
+        total_weight(): Returns the total weight of this item in the shipment (quantity * unit weight).
+    """
+
+    shipment = models.ForeignKey(
+        "Shipment", on_delete=models.CASCADE, related_name="items"
+    )
+    asset = models.ForeignKey(
+        "Asset", on_delete=models.PROTECT, related_name="shipment_items"
+    )
+    quantity = models.PositiveIntegerField()
+
+    unit_weight_lb = models.DecimalField(
+        max_digits=7, decimal_places=2, help_text="Weight per unit in pounds"
+    )
+
+    notes = models.TextField(blank=True, null=True)
+
+    def total_weight(self):
+        return self.quantity * self.unit_weight_lb
+
+    def __str__(self):
+        return f"{self.quantity} x {self.asset.name} (Shipment ID: {self.shipment_id})"
