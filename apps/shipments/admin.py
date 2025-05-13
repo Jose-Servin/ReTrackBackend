@@ -191,3 +191,22 @@ class VehicleAdmin(ModelAdmin):
     """
 
     list_display = ["carrier", "plate_number", "device_id"]
+
+
+@admin.register(models.Asset)
+class AssetAdmin(admin.ModelAdmin):
+    list_display = [
+        "name",
+        "description",
+        "weight_lb",
+        "length_in",
+        "width_in",
+        "height_in",
+        "is_fragile",
+        "is_hazardous",
+    ]
+
+
+@admin.register(models.ShipmentItem)
+class ShipmentItemAdmin(admin.ModelAdmin):
+    list_display = ["shipment", "asset", "quantity", "unit_weight_lb", "notes"]

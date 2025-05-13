@@ -193,7 +193,9 @@ class Shipment(models.Model):
         )
 
         self.current_status = new_status
-
+        # TODO: align data from ShipmentStatusEvent and Shipment tables to follow these constraints
+        # actual_pickup from Shipement model should be the same value as event_timestamp for status IN_TRANSIT
+        # actual_delivery from Shipement model should be the same value as event_timestamp for status DELIVERED
         if (
             new_status == ShipmentStatusEvent.Status.IN_TRANSIT
             and not self.actual_pickup
@@ -253,4 +255,4 @@ class ShipmentItem(models.Model):
         return self.quantity * self.unit_weight_lb
 
     def __str__(self):
-        return f"{self.quantity} x {self.asset.name} (Shipment ID: {self.shipment_id})"
+        return f"{self.quantity} * {self.asset.name} (Shipment ID: {self.shipment_id})"
