@@ -1,6 +1,7 @@
 asgiref==3.8.1
 Django==5.2
 django-debug-toolbar==5.1.0
+django-unfold==0.57.0
 graphviz==0.20.3
 psycopg2==2.9.10
 psycopg2-binary==2.9.10
