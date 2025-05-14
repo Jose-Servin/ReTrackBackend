@@ -4,6 +4,7 @@ from django.db.models import Count
 from django.urls import reverse
 from django.utils.html import format_html, urlencode
 from . import models
+from unfold.admin import ModelAdmin
 
 
 class DriverCapacityFilter(admin.SimpleListFilter):
@@ -29,7 +30,7 @@ class DriverCapacityFilter(admin.SimpleListFilter):
 
 
 @admin.register(models.Carrier)
-class CarrierAdmin(admin.ModelAdmin):
+class CarrierAdmin(ModelAdmin):
     """
     Custom admin class for the Carrier model.
 
@@ -83,7 +84,7 @@ class CarrierAdmin(admin.ModelAdmin):
 
 
 @admin.register(models.CarrierContact)
-class CarrierContactAdmin(admin.ModelAdmin):
+class CarrierContactAdmin(ModelAdmin):
     """
     Custom admin class for the CarrierContact model.
 
@@ -99,7 +100,7 @@ class CarrierContactAdmin(admin.ModelAdmin):
 
 
 @admin.register(models.Shipment)
-class ShipmentAdmin(admin.ModelAdmin):
+class ShipmentAdmin(ModelAdmin):
     """
     Custom admin class for the Shipment model.
 
@@ -121,7 +122,7 @@ class ShipmentAdmin(admin.ModelAdmin):
 
 
 @admin.register(models.ShipmentStatusEvent)
-class ShipmentStatusEventAdmin(admin.ModelAdmin):
+class ShipmentStatusEventAdmin(ModelAdmin):
     """
     Custom admin class for the ShipmentStatusEvent model.
 
@@ -181,7 +182,7 @@ class DriverAdmin(admin.ModelAdmin):
 
 
 @admin.register(models.Vehicle)
-class VehicleAdmin(admin.ModelAdmin):
+class VehicleAdmin(ModelAdmin):
     """
     Custom admin class for the Vehicle model.
 
