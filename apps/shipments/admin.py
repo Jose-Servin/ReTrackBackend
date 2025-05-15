@@ -5,6 +5,7 @@ from django.urls import reverse
 from django.utils.html import format_html, urlencode
 from . import models
 from unfold.admin import ModelAdmin
+from django.db.models import OuterRef, Subquery
 
 
 class DriverCapacityFilter(admin.SimpleListFilter):
@@ -71,6 +72,12 @@ class CarrierAdmin(ModelAdmin):
             f"<a href='{drivers_changelist_url}'>{carrier.available_drivers}</a>"
         )
 
+    def get_readonly_fields(self, request, obj=None):
+        # obj is None when creating a new object
+        if obj:  # Editing an existing Carrier
+            return ["mc_number"]
+        return []  # Allow editing mc_number when creating
+
     def get_queryset(self, request):
         """
         Annotates the queryset with the number of drivers associated with each carrier.
@@ -99,6 +106,30 @@ class CarrierContactAdmin(ModelAdmin):
     list_select_related = ["carrier"]
 
 
+class CurrentStatusFilter(admin.SimpleListFilter):
+    title = "Current Status"
+    parameter_name = "current_status"
+
+    def lookups(self, request, model_admin):
+        return models.ShipmentStatusEvent.Status.choices
+
+    def queryset(self, request, queryset):
+        if self.value():
+            # Subquery to get latest status per shipment
+            latest_status_subquery = models.ShipmentStatusEvent.objects.filter(
+                shipment=OuterRef("pk")
+            ).order_by("-event_timestamp")
+
+            # Annotate each shipment with the latest status
+            queryset = queryset.annotate(
+                latest_status=Subquery(latest_status_subquery.values("status")[:1])
+            )
+
+            return queryset.filter(latest_status=self.value())
+
+        return queryset
+
+
 @admin.register(models.Shipment)
 class ShipmentAdmin(ModelAdmin):
     """
@@ -118,7 +149,7 @@ class ShipmentAdmin(ModelAdmin):
         "vehicle",
     ]
     list_select_related = ["carrier", "driver", "vehicle"]
-    list_filter = ["carrier", "current_status"]
+    list_filter = ["carrier", CurrentStatusFilter]
 
 
 @admin.register(models.ShipmentStatusEvent)

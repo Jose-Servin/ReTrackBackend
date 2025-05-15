@@ -161,13 +161,6 @@ class Shipment(models.Model):
     actual_pickup = models.DateTimeField(null=True, blank=True)
     actual_delivery = models.DateTimeField(null=True, blank=True)
 
-    current_status = models.CharField(
-        max_length=20,
-        choices=ShipmentStatusEvent.Status.choices,
-        default=ShipmentStatusEvent.Status.PENDING,
-        help_text="The most recent status. Derived from status events.",
-    )
-
     carrier = models.ForeignKey(
         "Carrier", on_delete=models.SET_NULL, null=True, blank=True
     )
@@ -181,6 +174,13 @@ class Shipment(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
+    @property
+    def current_status(self):
+        latest_event = self.status_events.order_by("-event_timestamp").first()
+        return (
+            latest_event.status if latest_event else ShipmentStatusEvent.Status.PENDING
+        )
+
     def __str__(self):
         return f"{self.origin} → {self.destination} [{self.current_status}]"
 
@@ -192,10 +192,10 @@ class Shipment(models.Model):
             source=source,
         )
 
-        self.current_status = new_status
         # TODO: align data from ShipmentStatusEvent and Shipment tables to follow these constraints
         # actual_pickup from Shipement model should be the same value as event_timestamp for status IN_TRANSIT
         # actual_delivery from Shipement model should be the same value as event_timestamp for status DELIVERED
+
         if (
             new_status == ShipmentStatusEvent.Status.IN_TRANSIT
             and not self.actual_pickup
@@ -208,14 +208,7 @@ class Shipment(models.Model):
         ):
             self.actual_delivery = event.event_timestamp
 
-        self.save(
-            update_fields=[
-                "current_status",
-                "actual_pickup",
-                "actual_delivery",
-                "updated_at",
-            ]
-        )
+        self.save(update_fields=["actual_pickup", "actual_delivery", "updated_at"])
         return event
 
 
