@@ -203,6 +203,22 @@ class Asset(models.Model):
 
 
 class ShipmentStatusEvent(models.Model):
+    """
+    Represents a lifecycle event in the status history of a shipment.
+
+    Attributes:
+        shipment (ForeignKey): The shipment associated with this event.
+        status (str): The status value at this point in time (e.g., Pending, In Transit, Delivered).
+        event_timestamp (datetime): When the event occurred (can be backfilled or real-time).
+        source (str): Optional system or user responsible for the event.
+        created_at (datetime): When the record was created.
+        updated_at (datetime): When the record was last updated.
+
+    Notes:
+        This model serves as the single source of truth for tracking all status changes
+        in a shipment's lifecycle.
+    """
+
     class Status(models.TextChoices):
         PENDING = "pending", "Pending"
         IN_TRANSIT = "in_transit", "In Transit"
@@ -229,6 +245,29 @@ class ShipmentStatusEvent(models.Model):
 
 
 class Shipment(models.Model):
+    """
+    Represents a shipment of goods from an origin to a destination.
+
+    Attributes:
+        origin (str): The origin location of the shipment (to be replaced with Location FK).
+        destination (str): The destination location of the shipment (to be replaced with Location FK).
+        scheduled_pickup (datetime): Planned pickup time.
+        scheduled_delivery (datetime): Planned delivery time.
+        actual_pickup (datetime): Actual pickup time, inferred from status events.
+        actual_delivery (datetime): Actual delivery time, inferred from status events.
+        carrier (ForeignKey): The carrier responsible for the shipment.
+        driver (ForeignKey): The assigned driver.
+        vehicle (ForeignKey): The assigned vehicle.
+        created_at (datetime): Timestamp when the shipment was created.
+        updated_at (datetime): Timestamp when the shipment was last updated.
+
+    Properties:
+        current_status (str): The most recent status, derived from ShipmentStatusEvents.
+
+    Methods:
+        record_status_event(): Logs a new status event and syncs shipment timestamps.
+    """
+
     # TODO: replace with FK to Location when model is defined
     origin = models.CharField(max_length=255)
     # TODO: replace with FK to Location when model is defined
@@ -263,7 +302,7 @@ class Shipment(models.Model):
     def __str__(self) -> str:
         return f"{self.origin} → {self.destination} [{self.current_status}]"
 
-    def update_status(
+    def record_status_event(
         self, new_status, source=None, event_timestamp=None
     ) -> ShipmentStatusEvent:
         event = ShipmentStatusEvent.objects.create(
@@ -307,8 +346,8 @@ class ShipmentItem(models.Model):
             - This value is snapshotted from the Asset model to preserve historical accuracy.
         notes (str): Optional notes or comments related to this shipment item (e.g., "damaged packaging").
 
-    Methods:
-        total_weight(): Returns the total weight of this item in the shipment (quantity * unit weight).
+    Properties:
+        total_weight (Decimal): The total weight of the item in the shipment (quantity * unit weight).
     """
 
     shipment = models.ForeignKey(
@@ -325,7 +364,8 @@ class ShipmentItem(models.Model):
 
     notes = models.TextField(blank=True, null=True)
 
-    def total_weight(self) -> Decimal:
+    @property
+    def total_weight(self):
         return self.quantity * self.unit_weight_lb
 
     def __str__(self) -> str:
