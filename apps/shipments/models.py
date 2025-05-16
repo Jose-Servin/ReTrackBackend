@@ -59,6 +59,24 @@ class Carrier(models.Model):
 
 
 class CarrierContact(models.Model):
+    """
+    Represents a point of contact for a carrier.
+
+    Attributes:
+        carrier (ForeignKey): The carrier this contact is associated with.
+        first_name (str): First name of the contact.
+        last_name (str): Last name of the contact.
+        email (str): Unique email address for the contact.
+        phone_number (str): Optional phone number.
+        role (str): The contact's role (e.g., Owner, Dispatch, Billing, Safety).
+        is_primary (bool): Indicates if this is the primary contact for the carrier.
+        created_at (datetime): Timestamp when the contact was created.
+        updated_at (datetime): Timestamp when the contact was last updated.
+
+    Constraints:
+        - Only one primary contact is allowed per carrier.
+    """
+
     class Role(models.TextChoices):
         OWNER = "OWNER", "Owner"
         DISPATCH = "DISPATCH", "Dispatch"
@@ -91,6 +109,19 @@ class CarrierContact(models.Model):
 
 
 class Driver(models.Model):
+    """
+    Represents a driver employed by a carrier.
+
+    Attributes:
+        first_name (str): First name of the driver.
+        last_name (str): Last name of the driver.
+        phone_number (str): Optional phone number.
+        email (str): Unique email address for the driver.
+        carrier (ForeignKey): The carrier this driver is associated with.
+        created_at (datetime): Timestamp when the driver was created.
+        updated_at (datetime): Timestamp when the driver was last updated.
+    """
+
     first_name = models.CharField(max_length=255)
     last_name = models.CharField(max_length=255)
     phone_number = models.CharField(max_length=20, blank=True, null=True)
@@ -106,6 +137,17 @@ class Driver(models.Model):
 
 
 class Vehicle(models.Model):
+    """
+    Represents a vehicle owned or operated by a carrier.
+
+    Attributes:
+        carrier (ForeignKey): The carrier that owns or operates this vehicle.
+        plate_number (str): Unique license plate identifier for the vehicle.
+        device_id (str): Optional tracking device identifier associated with the vehicle.
+        created_at (datetime): Timestamp when the vehicle record was created.
+        updated_at (datetime): Timestamp when the vehicle record was last updated.
+    """
+
     carrier = models.ForeignKey(
         Carrier, on_delete=models.CASCADE, related_name="vehicles"
     )
