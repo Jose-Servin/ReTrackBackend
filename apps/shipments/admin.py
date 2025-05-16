@@ -1,8 +1,10 @@
+from typing import Any, Sequence
 from django.contrib import admin
 from django.db.models.query import QuerySet
 from django.db.models import Count
 from django.urls import reverse
 from django.utils.html import format_html, urlencode
+from django.utils.safestring import SafeText
 from . import models
 from unfold.admin import ModelAdmin
 from django.db.models import OuterRef, Subquery
@@ -12,22 +14,23 @@ class DriverCapacityFilter(admin.SimpleListFilter):
     title = "Driver Capacity"
     parameter_name = "capacity"
 
-    def lookups(self, request, model_admin):
+    def lookups(self, request, model_admin) -> list[tuple[str, str]]:
         return [
-            ("lte1", "Under Capacity"),
-            ("btw2_3", "At Capacity"),
-            ("gte4", "Over Capacity"),
+            ("lte1", "Under Capacity (≤ 1)"),
+            ("btw2_3", "At Capacity (2-3)"),
+            ("gte4", "Over Capacity (≥ 4)"),
         ]
 
     def queryset(self, request, queryset: QuerySet) -> QuerySet:
+        annotated = queryset.annotate(driver_count=Count("drivers"))
         value = self.value()
         if value == "lte1":
-            return queryset.filter(available_drivers__lte=1)
+            return annotated.filter(driver_count__lte=1)
         elif value == "btw2_3":
-            return queryset.filter(available_drivers__gte=2, available_drivers__lte=3)
+            return annotated.filter(driver_count__gte=2, driver_count__lte=3)
         elif value == "gte4":
-            return queryset.filter(available_drivers__gte=4)
-        return queryset
+            return annotated.filter(driver_count__gte=4)
+        return annotated
 
 
 @admin.register(models.Carrier)
@@ -57,7 +60,7 @@ class CarrierAdmin(ModelAdmin):
     search_fields = ["name__istartswith", "mc_number__istartswith"]
 
     @admin.display(ordering="available_drivers")
-    def available_drivers(self, carrier):
+    def available_drivers(self, carrier) -> SafeText:
         """
         Returns the number of drivers associated with the carrier as a clickable link.
 
@@ -72,22 +75,13 @@ class CarrierAdmin(ModelAdmin):
             f"<a href='{drivers_changelist_url}'>{carrier.available_drivers}</a>"
         )
 
-    def get_readonly_fields(self, request, obj=None):
+    def get_readonly_fields(
+        self, request, obj=None
+    ):  # -> list[str] | list[Any]:  # -> list[str] | list[Any]:# -> list[str] | list[Any]:
         # obj is None when creating a new object
         if obj:  # Editing an existing Carrier
             return ["mc_number"]
         return []  # Allow editing mc_number when creating
-
-    def get_queryset(self, request):
-        """
-        Annotates the queryset with the number of drivers associated with each carrier.
-
-        Returns:
-        - The annotated queryset.
-        """
-        return (
-            super().get_queryset(request).annotate(available_drivers=Count("drivers"))
-        )
 
 
 @admin.register(models.CarrierContact)
@@ -110,10 +104,12 @@ class CurrentStatusFilter(admin.SimpleListFilter):
     title = "Current Status"
     parameter_name = "current_status"
 
-    def lookups(self, request, model_admin):
+    def lookups(
+        self, request, model_admin
+    ) -> Sequence[tuple[models.ShipmentStatusEvent.Status, str]]:
         return models.ShipmentStatusEvent.Status.choices
 
-    def queryset(self, request, queryset):
+    def queryset(self, request, queryset) -> QuerySet[Any]:
         if self.value():
             # Subquery to get latest status per shipment
             latest_status_subquery = models.ShipmentStatusEvent.objects.filter(
@@ -183,7 +179,7 @@ class DriverAdmin(admin.ModelAdmin):
     ]
 
     @admin.display(ordering="completed_shipments")
-    def completed_shipments(self, driver):
+    def completed_shipments(self, driver) -> SafeText:
         """
         Returns the number of shipments associated with the driver as a clickable link.
 
@@ -198,7 +194,7 @@ class DriverAdmin(admin.ModelAdmin):
             f"<a href='{shipment_chagelist_url}'>{driver.completed_shipments}</a>"
         )
 
-    def get_queryset(self, request):
+    def get_queryset(self, request) -> QuerySet:
         """
         Annotates the queryset with the number of shipements associated with each driver.
 

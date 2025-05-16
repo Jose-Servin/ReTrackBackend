@@ -1,9 +1,25 @@
+from decimal import Decimal
+from typing import Literal
 import uuid
 from django.db import models
 from django.utils import timezone
 
 
 class Carrier(models.Model):
+    """
+    Represents a freight carrier company.
+
+    Attributes:
+        name (str): The carrier's name.
+        mc_number (str): The carrier's motor carrier number.
+        created_at (datetime): Timestamp when the carrier was created.
+        updated_at (datetime): Timestamp when the carrier was last updated.
+
+    Properties:
+        available_drivers (int): Number of drivers linked to this carrier.
+        capacity_status (str): A label describing driver availability as Under, At, or Over Capacity.
+    """
+
     name = models.CharField(max_length=255)
     mc_number = models.CharField(max_length=50)
     # TODO: replace with FK to core.User when model is defined
@@ -11,11 +27,35 @@ class Carrier(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
-    def __str__(self):
-        return self.name
-
     class Meta:
         ordering = ["name"]
+
+    def __str__(self) -> str:
+        return self.name
+
+    @property
+    def available_drivers(self) -> int:
+        """
+        Returns the number of drivers linked to this carrier.
+        """
+        return self.drivers.count()
+
+    @property
+    def capacity_status(
+        self,
+    ) -> Literal["Under Capacity"] | Literal["At Capacity"] | Literal["Over Capacity"]:
+        """
+        Returns a string classifying the driver count as:
+        - Under Capacity (≤ 1)
+        - At Capacity (2 - 3)
+        - Over Capacity (≥ 4)
+        """
+        count = self.available_drivers
+        if count <= 1:
+            return "Under Capacity"
+        elif 2 <= count <= 3:
+            return "At Capacity"
+        return "Over Capacity"
 
 
 class CarrierContact(models.Model):
@@ -32,12 +72,7 @@ class CarrierContact(models.Model):
     last_name = models.CharField(max_length=255)
     email = models.EmailField(unique=True)
     phone_number = models.CharField(max_length=20, null=True, blank=True)
-    role = models.CharField(
-        max_length=20,
-        choices=Role.choices,
-        default=Role.OWNER,
-        blank=True,
-    )
+    role = models.CharField(max_length=20, choices=Role.choices, default=Role.DISPATCH)
     is_primary = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -51,14 +86,14 @@ class CarrierContact(models.Model):
             )
         ]
 
-    def __str__(self):
+    def __str__(self) -> str:
         return f"{self.first_name} {self.last_name}"
 
 
 class Driver(models.Model):
     first_name = models.CharField(max_length=255)
     last_name = models.CharField(max_length=255)
-    phone_number = models.CharField(max_length=20, blank=True)
+    phone_number = models.CharField(max_length=20, blank=True, null=True)
     email = models.EmailField(unique=True)
     carrier = models.ForeignKey(
         Carrier, on_delete=models.CASCADE, related_name="drivers"
@@ -66,8 +101,8 @@ class Driver(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
-    def __str__(self):
-        return f"{self.first_name} {self.last_name}"
+    def __str__(self) -> str:
+        return f"{self.first_name} {self.last_name} ({self.carrier.name})"
 
 
 class Vehicle(models.Model):
@@ -79,7 +114,7 @@ class Vehicle(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
-    def __str__(self):
+    def __str__(self) -> str:
         return f"{self.carrier.name} - {self.plate_number}"
 
 
@@ -121,7 +156,7 @@ class Asset(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
-    def __str__(self):
+    def __str__(self) -> str:
         return self.name
 
 
@@ -147,7 +182,7 @@ class ShipmentStatusEvent(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
-    def __str__(self):
+    def __str__(self) -> str:
         return f"{self.status} @ {self.event_timestamp} (Shipment {self.shipment.id})"
 
 
@@ -175,16 +210,20 @@ class Shipment(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     @property
-    def current_status(self):
+    def current_status(
+        self,
+    ):
         latest_event = self.status_events.order_by("-event_timestamp").first()
         return (
             latest_event.status if latest_event else ShipmentStatusEvent.Status.PENDING
         )
 
-    def __str__(self):
+    def __str__(self) -> str:
         return f"{self.origin} → {self.destination} [{self.current_status}]"
 
-    def update_status(self, new_status, source=None, event_timestamp=None):
+    def update_status(
+        self, new_status, source=None, event_timestamp=None
+    ) -> ShipmentStatusEvent:
         event = ShipmentStatusEvent.objects.create(
             shipment=self,
             status=new_status,
@@ -244,8 +283,8 @@ class ShipmentItem(models.Model):
 
     notes = models.TextField(blank=True, null=True)
 
-    def total_weight(self):
+    def total_weight(self) -> Decimal:
         return self.quantity * self.unit_weight_lb
 
-    def __str__(self):
+    def __str__(self) -> str:
         return f"{self.quantity} * {self.asset.name} (Shipment ID: {self.shipment_id})"
