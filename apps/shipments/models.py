@@ -3,6 +3,14 @@ from typing import Literal
 import uuid
 from django.db import models
 from django.utils import timezone
+from django.core.exceptions import ValidationError
+from phonenumber_field.modelfields import PhoneNumberField
+from django.core.validators import RegexValidator
+
+plate_validator = RegexValidator(
+    regex=r"^[A-Za-z0-9-]{1,20}$",
+    message="Enter a valid plate number using letters, numbers, or hyphens only (no spaces or special characters).",
+)
 
 
 class Carrier(models.Model):
@@ -67,7 +75,7 @@ class CarrierContact(models.Model):
         first_name (str): First name of the contact.
         last_name (str): Last name of the contact.
         email (str): Unique email address for the contact.
-        phone_number (str): Optional phone number.
+        phone_number (PhoneNumberField): Optional phone number in US format.
         role (str): The contact's role (e.g., Owner, Dispatch, Billing, Safety).
         is_primary (bool): Indicates if this is the primary contact for the carrier.
         created_at (datetime): Timestamp when the contact was created.
@@ -75,6 +83,7 @@ class CarrierContact(models.Model):
 
     Constraints:
         - Only one primary contact is allowed per carrier.
+        - Enforced both at the database level and through form validation via clean().
     """
 
     class Role(models.TextChoices):
@@ -89,7 +98,7 @@ class CarrierContact(models.Model):
     first_name = models.CharField(max_length=255)
     last_name = models.CharField(max_length=255)
     email = models.EmailField(unique=True)
-    phone_number = models.CharField(max_length=20, null=True, blank=True)
+    phone_number = PhoneNumberField(blank=True, null=True, region="US")
     role = models.CharField(max_length=20, choices=Role.choices, default=Role.DISPATCH)
     is_primary = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -106,6 +115,17 @@ class CarrierContact(models.Model):
 
     def __str__(self) -> str:
         return f"{self.first_name} {self.last_name}"
+
+    def clean(self) -> None:
+        # Ensure no more than one primary contact per carrier at the form level
+        if self.is_primary:
+            existing = CarrierContact.objects.filter(
+                carrier=self.carrier, is_primary=True
+            )
+            if self.pk:
+                existing = existing.exclude(pk=self.pk)  # skip self during edit
+            if existing.exists():
+                raise ValidationError("This carrier already has a primary contact.")
 
 
 class Driver(models.Model):
@@ -124,7 +144,7 @@ class Driver(models.Model):
 
     first_name = models.CharField(max_length=255)
     last_name = models.CharField(max_length=255)
-    phone_number = models.CharField(max_length=20, blank=True, null=True)
+    phone_number = PhoneNumberField(blank=True, null=True, region="US")
     email = models.EmailField(unique=True)
     carrier = models.ForeignKey(
         Carrier, on_delete=models.CASCADE, related_name="drivers"
@@ -135,6 +155,12 @@ class Driver(models.Model):
     def __str__(self) -> str:
         return f"{self.first_name} {self.last_name} ({self.carrier.name})"
 
+    def save(self, *args, **kwargs) -> None:
+        # Normalize email to lowercase to enforce case-insensitive uniqueness
+        if self.email:
+            self.email = self.email.lower()
+        super().save(*args, **kwargs)
+
 
 class Vehicle(models.Model):
     """
@@ -143,6 +169,8 @@ class Vehicle(models.Model):
     Attributes:
         carrier (ForeignKey): The carrier that owns or operates this vehicle.
         plate_number (str): Unique license plate identifier for the vehicle.
+            - Must consist of letters, numbers, or hyphens (no spaces or symbols).
+            - Accepts lowercase on input, but automatically normalized to uppercase on save.
         device_id (str): Optional tracking device identifier associated with the vehicle.
         created_at (datetime): Timestamp when the vehicle record was created.
         updated_at (datetime): Timestamp when the vehicle record was last updated.
@@ -151,13 +179,20 @@ class Vehicle(models.Model):
     carrier = models.ForeignKey(
         Carrier, on_delete=models.CASCADE, related_name="vehicles"
     )
-    plate_number = models.CharField(max_length=20, unique=True)
+    plate_number = models.CharField(
+        max_length=20, unique=True, validators=[plate_validator]
+    )
     device_id = models.CharField(max_length=100, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self) -> str:
         return f"{self.carrier.name} - {self.plate_number}"
+
+    def save(self, *args, **kwargs) -> None:
+        if self.plate_number:
+            self.plate_number = self.plate_number.upper()
+        super().save(*args, **kwargs)
 
 
 class Asset(models.Model):
