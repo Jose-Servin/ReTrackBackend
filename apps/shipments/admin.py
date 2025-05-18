@@ -126,6 +126,13 @@ class CurrentStatusFilter(admin.SimpleListFilter):
         return queryset
 
 
+class ShipmentItemsInline(admin.TabularInline):
+    model = models.ShipmentItem
+    autocomplete_fields = ["asset"]
+    extra = 0
+    min_num = 1
+
+
 @admin.register(models.Shipment)
 class ShipmentAdmin(ModelAdmin):
     """
@@ -136,6 +143,8 @@ class ShipmentAdmin(ModelAdmin):
     - list_select_related (list): Related objects to include in the query to optimize performance.
     """
 
+    autocomplete_fields = ["carrier", "driver", "vehicle"]
+    inlines = [ShipmentItemsInline]
     list_display = [
         "origin",
         "destination",
@@ -178,6 +187,8 @@ class DriverAdmin(admin.ModelAdmin):
         "carrier",
     ]
 
+    search_fields = ["first_name__istartswith", "last_name__istartswith"]
+
     @admin.display(ordering="completed_shipments")
     def completed_shipments(self, driver) -> SafeText:
         """
@@ -218,10 +229,12 @@ class VehicleAdmin(ModelAdmin):
     """
 
     list_display = ["carrier", "plate_number", "device_id"]
+    search_fields = ["carrier__name__istartswith", "plate_number__istartswith"]
 
 
 @admin.register(models.Asset)
 class AssetAdmin(admin.ModelAdmin):
+    prepopulated_fields = {"slug": ("name",)}
     list_display = [
         "name",
         "description",
@@ -232,6 +245,7 @@ class AssetAdmin(admin.ModelAdmin):
         "is_fragile",
         "is_hazardous",
     ]
+    search_fields = ["name__istartswith"]
 
 
 @admin.register(models.ShipmentItem)

@@ -64,5 +64,5 @@ class Attachment(models.Model):
 
     uploaded_at = models.DateTimeField(auto_now_add=True)
 
-    def __str__(self):
+    def __str__(self) -> str:
         return f"{self.file.name} attached to {self.content_type} {self.object_id}"
