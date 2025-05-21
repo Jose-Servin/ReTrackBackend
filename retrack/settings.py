@@ -54,6 +54,7 @@ INSTALLED_APPS = [
     "apps.core",
     "apps.shipments",
     "apps.attachments",
+    "apps.locations",
     "phonenumber_field",
 ]
 
