@@ -1,6 +1,5 @@
 from decimal import Decimal
 from typing import Literal
-import uuid
 from django.db import models
 from django.utils import timezone
 from django.core.exceptions import ValidationError
@@ -262,7 +261,7 @@ class Asset(models.Model):
             raise ValidationError("An asset cannot be both fragile and hazardous.")
 
     @property
-    def volume_cubic_in(self):
+    def volume_cubic_in(self) -> Decimal:
         return self.length_in * self.width_in * self.height_in
 
 
@@ -361,10 +360,8 @@ class Shipment(models.Model):
     Represents a shipment of goods from an origin to a destination.
 
     Attributes:
-        origin (str): The origin location of the shipment.
-            - To be replaced with a ForeignKey to a Location model.
-        destination (str): The destination location of the shipment.
-            - To be replaced with a ForeignKey to a Location model.
+        origin (ForeignKey): The origin location of the shipment.
+        destination (ForeignKey): The destination location of the shipment.
         scheduled_pickup (datetime): Planned pickup time.
         scheduled_delivery (datetime): Planned delivery time.
         actual_pickup (datetime): Actual pickup time, inferred from status events.
@@ -389,15 +386,24 @@ class Shipment(models.Model):
         Default ordering is by scheduled pickup time (ascending).
     """
 
-    # TODO: replace with FK to Location when model is defined
-    origin = models.CharField(max_length=255)
-    # TODO: replace with FK to Location when model is defined
-    destination = models.CharField(max_length=255)
     scheduled_pickup = models.DateTimeField()
     scheduled_delivery = models.DateTimeField()
     actual_pickup = models.DateTimeField(null=True, blank=True)
     actual_delivery = models.DateTimeField(null=True, blank=True)
 
+    origin = models.ForeignKey(
+        "locations.Location",
+        on_delete=models.PROTECT,
+        null=False,
+        related_name="shipments_origin",
+    )
+
+    destination = models.ForeignKey(
+        "locations.Location",
+        on_delete=models.PROTECT,
+        null=False,
+        related_name="shipments_destination",
+    )
     carrier = models.ForeignKey(
         "Carrier", on_delete=models.SET_NULL, null=True, blank=True
     )
