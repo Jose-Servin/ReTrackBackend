@@ -55,6 +55,7 @@ INSTALLED_APPS = [
     "apps.shipments",
     "apps.attachments",
     "apps.locations",
+    "apps.tracking",
     "phonenumber_field",
 ]
 
