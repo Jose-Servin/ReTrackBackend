@@ -102,14 +102,14 @@ class GPSTrackingEvent(models.Model):
         help_text="Device responsible for this tracking event.",
     )
     vehicle = models.ForeignKey(
-        "Vehicle",
+        "shipments.Vehicle",
         null=True,
         blank=True,
         on_delete=models.SET_NULL,
         help_text="Vehicle involved at the time of the event.",
     )
     shipment = models.ForeignKey(
-        "Shipment",
+        "shipments.Shipment",
         null=True,
         blank=True,
         on_delete=models.SET_NULL,

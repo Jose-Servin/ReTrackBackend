@@ -31,7 +31,7 @@ class AttachmentInline(GenericTabularInline):
     min_num = 1
 
 
-class CustomShipmentAdmin(ShipmentAdmin):
+class CustomShipmentAdmin(ShipmentAdmin, ModelAdmin):
     """
     Custom admin for the Shipments model to include Attachment management.
 

@@ -4,5 +4,5 @@ from unfold.admin import ModelAdmin
 
 
 @admin.register(models.Location)
-class LocationAdmin(admin.ModelAdmin):
+class LocationAdmin(ModelAdmin):
     list_display = ["name", "address_line1", "city", "state", "postal_code", "country"]

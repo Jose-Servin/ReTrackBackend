@@ -170,7 +170,7 @@ class ShipmentStatusEventAdmin(ModelAdmin):
 
 
 @admin.register(models.Driver)
-class DriverAdmin(admin.ModelAdmin):
+class DriverAdmin(ModelAdmin):
     """
     Custom admin class for the Driver model.
 
@@ -233,7 +233,7 @@ class VehicleAdmin(ModelAdmin):
 
 
 @admin.register(models.Asset)
-class AssetAdmin(admin.ModelAdmin):
+class AssetAdmin(ModelAdmin):
     prepopulated_fields = {"slug": ("name",)}
     list_display = [
         "name",
@@ -249,5 +249,5 @@ class AssetAdmin(admin.ModelAdmin):
 
 
 @admin.register(models.ShipmentItem)
-class ShipmentItemAdmin(admin.ModelAdmin):
-    list_display = ["shipment", "asset", "quantity", "unit_weight_lb", "notes"]
+class ShipmentItemAdmin(ModelAdmin):
+    list_display = ["asset", "shipment", "quantity", "unit_weight_lb", "notes"]
