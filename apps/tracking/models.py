@@ -6,14 +6,14 @@ class GPSDevice(models.Model):
     Represents a physical GPS tracking device installed on a vehicle or asset.
 
     Attributes:
-        device_id (str): Unique hardware identifier for the GPS device.
+        serial_number (str): Unique hardware identifier for the GPS device.
         assigned_vehicle (ForeignKey): Optional link to the Vehicle currently using this device.
         is_active (bool): Whether the device is actively reporting data.
         last_seen (datetime): Timestamp of the most recent GPSTrackingPing received.
         created_at (datetime): Timestamp when the device record was created.
     """
 
-    device_id = models.CharField(max_length=100, unique=True)
+    serial_number = models.CharField(max_length=100, unique=True)
     assigned_vehicle = models.ForeignKey(
         "shipments.Vehicle",
         null=True,
@@ -29,6 +29,9 @@ class GPSDevice(models.Model):
         null=True, blank=True, help_text="Timestamp of the last received ping."
     )
     created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self) -> str:
+        return self.serial_number
 
 
 class GPSTrackingPing(models.Model):
@@ -71,6 +74,9 @@ class GPSTrackingPing(models.Model):
         indexes = [
             models.Index(fields=["gps_device", "recorded_at"]),
         ]
+
+    def __str__(self) -> str:
+        return f"{self.gps_device.serial_number} @ {self.recorded_at:%m/%d %H:%M}"
 
 
 class GPSTrackingEvent(models.Model):
@@ -133,3 +139,6 @@ class GPSTrackingEvent(models.Model):
 
     class Meta:
         ordering = ["-event_timestamp"]
+
+    def __str__(self) -> str:
+        return f"{self.event_type} @ {self.event_timestamp:%m/%d %H:%M} | {self.gps_device.serial_number}"
