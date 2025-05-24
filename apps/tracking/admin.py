@@ -4,9 +4,9 @@ from unfold.admin import ModelAdmin
 
 
 @admin.register(models.GPSDevice)
-class GPSDeviceAdmin(admin.ModelAdmin):
+class GPSDeviceAdmin(ModelAdmin):
     list_display = [
-        "device_id",
+        "serial_number",
         "assigned_vehicle",
         "is_active",
         "last_seen",
