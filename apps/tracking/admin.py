@@ -20,7 +20,7 @@ class GPSTrackingPingAdmin(ModelAdmin):
         "gps_device",
         "latitude",
         "longitude",
-        "timestamp",
+        "recorded_at",
         "speed_mph",
         "heading",
         "created_at",

@@ -39,7 +39,7 @@ class GPSTrackingPing(models.Model):
         gps_device (ForeignKey): The device that reported this ping.
         latitude (decimal): Latitude coordinate.
         longitude (decimal): Longitude coordinate.
-        timestamp (datetime): Timestamp when the GPS reading was taken.
+        recorded_at (datetime): Timestamp when the GPS reading was taken.
         speed_mph (float): Optional. Speed of the device at time of ping (in miles per hour).
         heading (float): Optional. Direction the device is facing (in degrees).
         created_at (datetime): Record creation time.
@@ -57,7 +57,7 @@ class GPSTrackingPing(models.Model):
     longitude = models.DecimalField(
         max_digits=9, decimal_places=6, help_text="Longitude at time of ping."
     )
-    timestamp = models.DateTimeField(help_text="Timestamp of the GPS reading.")
+    recorded_at = models.DateTimeField(help_text="Timestamp of the GPS reading.")
     speed_mph = models.FloatField(
         null=True, blank=True, help_text="Optional. Speed at time of ping."
     )
@@ -67,9 +67,9 @@ class GPSTrackingPing(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
-        ordering = ["-timestamp"]
+        ordering = ["-recorded_at"]
         indexes = [
-            models.Index(fields=["gps_device", "timestamp"]),
+            models.Index(fields=["gps_device", "recorded_at"]),
         ]
 
 
