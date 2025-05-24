@@ -171,7 +171,6 @@ class Vehicle(models.Model):
         plate_number (str): Unique license plate identifier for the vehicle.
             - Must consist of letters, numbers, or hyphens (no spaces or symbols).
             - Accepts lowercase on input, but automatically normalized to uppercase on save.
-        device_id (str): Optional tracking device identifier associated with the vehicle.
         created_at (datetime): Timestamp when the vehicle record was created.
         updated_at (datetime): Timestamp when the vehicle record was last updated.
     """
@@ -182,7 +181,6 @@ class Vehicle(models.Model):
     plate_number = models.CharField(
         max_length=20, unique=True, validators=[plate_validator]
     )
-    device_id = models.CharField(max_length=100, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

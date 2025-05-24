@@ -228,7 +228,7 @@ class VehicleAdmin(ModelAdmin):
     - list_display (list): Fields to display in the list view.
     """
 
-    list_display = ["carrier", "plate_number", "device_id"]
+    list_display = ["carrier", "plate_number"]
     search_fields = ["carrier__name__istartswith", "plate_number__istartswith"]
 
 
