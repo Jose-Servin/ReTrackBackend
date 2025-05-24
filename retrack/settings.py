@@ -13,6 +13,9 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 from pathlib import Path
 from dotenv import load_dotenv
 import os
+from django.templatetags.static import static
+from django.urls import reverse_lazy
+from django.utils.translation import gettext_lazy as _
 
 # load_dotenv base directory
 base_path = Path()
@@ -157,4 +160,136 @@ MEDIA_ROOT = os.path.join(BASE_DIR, "media")
 
 UNFOLD = {
     "SITE_HEADER": "ReTrackLogistics",
+    "SITE_SYMBOL": "satellite_alt",  # symbol from icon set
+    "SIDEBAR": {
+        "show_search": True,  # Search in applications and models names
+        "show_all_applications": True,  # Dropdown with all applications and models
+        "navigation": [
+            {
+                "title": _("Users & Groups"),
+                "separator": True,  # Top border
+                "collapsible": True,  # Collapsible group of links
+                "items": [
+                    {
+                        "title": _("Users"),
+                        "icon": "people",
+                        "link": reverse_lazy("admin:core_user_changelist"),
+                    },
+                    {
+                        "title": _("Groups"),
+                        "icon": "groups",
+                        "link": reverse_lazy("admin:auth_group_changelist"),
+                    },
+                ],
+            },
+            {
+                "title": _("Attachments"),
+                "separator": True,  # Top border
+                "collapsible": True,  # Collapsible group of links
+                "items": [
+                    {
+                        "title": _("Documents"),
+                        "icon": "docs",
+                        "link": reverse_lazy("admin:attachments_attachment_changelist"),
+                    },
+                ],
+            },
+            {
+                "title": _("Operations"),
+                "separator": True,  # Top border
+                "collapsible": True,  # Collapsible group of links
+                "items": [
+                    {
+                        "title": "Shipments",
+                        "icon": "delivery_truck_speed",
+                        "link": reverse_lazy("admin:shipments_shipment_changelist"),
+                    },
+                    {
+                        "title": "Shipment Items",
+                        "icon": "package_2",
+                        "link": reverse_lazy("admin:shipments_shipmentitem_changelist"),
+                    },
+                ],
+            },
+            {
+                "title": _("Tracking"),
+                "separator": True,  # Top border
+                "collapsible": True,  # Collapsible group of links
+                "items": [
+                    {
+                        "title": "GPS Devices",
+                        "icon": "sensors",
+                        "link": reverse_lazy("admin:tracking_gpsdevice_changelist"),
+                    },
+                    {
+                        "title": "GPS Pings",
+                        "icon": "pin_drop",
+                        "link": reverse_lazy(
+                            "admin:tracking_gpstrackingping_changelist"
+                        ),
+                    },
+                    {
+                        "title": "Tracking Events",
+                        "icon": "monitor_heart",
+                        "link": reverse_lazy(
+                            "admin:tracking_gpstrackingevent_changelist"
+                        ),
+                    },
+                    {
+                        "title": "Shipment Events",
+                        "icon": "calendar_month",
+                        "link": reverse_lazy(
+                            "admin:shipments_shipmentstatusevent_changelist"
+                        ),
+                    },
+                ],
+            },
+            {
+                "title": _("Resources"),
+                "separator": True,  # Top border
+                "collapsible": True,  # Collapsible group of links
+                "items": [
+                    {
+                        "title": "Vehicles",
+                        "icon": "local_shipping",
+                        "link": reverse_lazy("admin:shipments_vehicle_changelist"),
+                    },
+                    {
+                        "title": "Drivers",
+                        "icon": "id_card",
+                        "link": reverse_lazy("admin:shipments_driver_changelist"),
+                    },
+                    {
+                        "title": "Carriers",
+                        "icon": "emoji_transportation",
+                        "link": reverse_lazy("admin:shipments_carrier_changelist"),
+                    },
+                    {
+                        "title": "Carrier Contacts",
+                        "icon": "support_agent",
+                        "link": reverse_lazy(
+                            "admin:shipments_carriercontact_changelist"
+                        ),
+                    },
+                ],
+            },
+            {
+                "title": "Reference Data",
+                "separator": True,  # Top border
+                "collapsible": True,  # Collapsible group of links
+                "items": [
+                    {
+                        "title": "Locations",
+                        "icon": "map",
+                        "link": reverse_lazy("admin:locations_location_changelist"),
+                    },
+                    {
+                        "title": "Assets",
+                        "icon": "inventory",
+                        "link": reverse_lazy("admin:shipments_asset_changelist"),
+                    },
+                ],
+            },
+        ],
+    },
 }
