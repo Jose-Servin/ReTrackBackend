@@ -327,7 +327,8 @@ class ShipmentStatusEvent(models.Model):
     def clean(self) -> None:
         # Chronological validation
         latest_event = (
-            self.shipment.status_events.exclude(pk=self.pk)
+            ShipmentStatusEvent.objects.filter(shipment=self.shipment)
+            .exclude(pk=self.pk)
             .order_by("-event_timestamp")
             .first()
         )

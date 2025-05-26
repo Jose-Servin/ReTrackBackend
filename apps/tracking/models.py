@@ -1,4 +1,5 @@
 from django.db import models
+from django.core.exceptions import ValidationError
 
 
 class GPSDevice(models.Model):
@@ -46,6 +47,9 @@ class GPSTrackingPing(models.Model):
         speed_mph (float): Optional. Speed of the device at time of ping (in miles per hour).
         heading (float): Optional. Direction the device is facing (in degrees).
         created_at (datetime): Record creation time.
+
+    Constraints:
+        - A GPS device cannot have two pings with the same recorded_at timestamp.
     """
 
     gps_device = models.ForeignKey(
@@ -74,6 +78,12 @@ class GPSTrackingPing(models.Model):
         indexes = [
             models.Index(fields=["gps_device", "recorded_at"]),
         ]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["gps_device", "recorded_at"],
+                name="unique_ping_per_device_timestamp",
+            )
+        ]
 
     def __str__(self) -> str:
         return f"{self.gps_device.serial_number} @ {self.recorded_at:%m/%d %H:%M}"
@@ -92,6 +102,14 @@ class GPSTrackingEvent(models.Model):
         location (ForeignKey): Optional. Known location related to the event (e.g., warehouse geofence).
         note (str): Optional. Additional context or system explanation.
         created_at (datetime): When the event record was created.
+
+    Constraints:
+        - A GPS device cannot have multiple events of the same type at the same timestamp.
+        (unique on [gps_device, event_type, event_timestamp])
+
+    Validation:
+        - Ensures tracking events are recorded in chronological order per device.
+        (i.e., no event may occur earlier than the latest known event for that GPS device)
     """
 
     class EventType(models.TextChoices):
@@ -139,6 +157,26 @@ class GPSTrackingEvent(models.Model):
 
     class Meta:
         ordering = ["-event_timestamp"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["gps_device", "event_type", "event_timestamp"],
+                name="unique_tracking_event_per_timestamp",
+            )
+        ]
 
     def __str__(self) -> str:
         return f"{self.event_type} @ {self.event_timestamp:%m/%d %H:%M} | {self.gps_device.serial_number}"
+
+    def clean(self) -> None:
+        # Chronological validation
+        # TODO: Document clean method understanding
+        latest_event = (
+            GPSTrackingEvent.objects.filter(gps_device=self.gps_device)
+            .exclude(pk=self.pk)
+            .order_by("-event_timestamp")
+            .first()
+        )
+        if latest_event and latest_event.event_timestamp > self.event_timestamp:
+            raise ValidationError(
+                "Tracking events must be chronological for each device."
+            )
