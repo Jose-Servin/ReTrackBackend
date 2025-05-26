@@ -250,16 +250,6 @@ UNFOLD = {
                 "collapsible": True,  # Collapsible group of links
                 "items": [
                     {
-                        "title": "Vehicles",
-                        "icon": "local_shipping",
-                        "link": reverse_lazy("admin:shipments_vehicle_changelist"),
-                    },
-                    {
-                        "title": "Drivers",
-                        "icon": "id_card",
-                        "link": reverse_lazy("admin:shipments_driver_changelist"),
-                    },
-                    {
                         "title": "Carriers",
                         "icon": "emoji_transportation",
                         "link": reverse_lazy("admin:shipments_carrier_changelist"),
@@ -270,6 +260,16 @@ UNFOLD = {
                         "link": reverse_lazy(
                             "admin:shipments_carriercontact_changelist"
                         ),
+                    },
+                    {
+                        "title": "Drivers",
+                        "icon": "id_card",
+                        "link": reverse_lazy("admin:shipments_driver_changelist"),
+                    },
+                    {
+                        "title": "Vehicles",
+                        "icon": "local_shipping",
+                        "link": reverse_lazy("admin:shipments_vehicle_changelist"),
                     },
                 ],
             },

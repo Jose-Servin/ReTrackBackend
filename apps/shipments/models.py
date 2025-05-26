@@ -429,7 +429,7 @@ class Shipment(models.Model):
         )
 
     def __str__(self) -> str:
-        return f"{self.origin} → {self.destination} [{self.current_status}]"
+        return f"{self.origin} → {self.destination}"
 
     def record_status_event(
         self, new_status, source=None, event_timestamp=None
@@ -524,4 +524,4 @@ class ShipmentItem(models.Model):
         return self.quantity * self.unit_weight_lb
 
     def __str__(self) -> str:
-        return f"{self.quantity} * {self.asset.name} (Shipment ID: {self.shipment_id})"
+        return self.asset.name
