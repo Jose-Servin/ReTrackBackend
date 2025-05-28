@@ -153,7 +153,7 @@ class Driver(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self) -> str:
-        return f"{self.first_name} {self.last_name} ({self.carrier.name})"
+        return f"{self.first_name} {self.last_name}"
 
     def save(self, *args, **kwargs) -> None:
         # Normalize email to lowercase to enforce case-insensitive uniqueness
@@ -185,7 +185,7 @@ class Vehicle(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self) -> str:
-        return f"{self.carrier.name} - {self.plate_number}"
+        return self.plate_number
 
     def save(self, *args, **kwargs) -> None:
         if self.plate_number:
@@ -322,7 +322,8 @@ class ShipmentStatusEvent(models.Model):
         ordering = ["event_timestamp"]
 
     def __str__(self) -> str:
-        return f"{self.status} @ {self.event_timestamp} (Shipment {self.shipment.id})"
+        ts = self.event_timestamp.strftime("%m/%d %H:%M")
+        return f"{self.get_status_display()} @ {ts} (Shipment #{self.shipment_id})"
 
     def clean(self) -> None:
         # Chronological validation

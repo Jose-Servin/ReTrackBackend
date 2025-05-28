@@ -261,7 +261,7 @@ class ShipmentStatusEventAdmin(ModelAdmin):
     - list_display (list): Fields to display in the list view.
     """
 
-    list_display = ["shipment", "status", "event_timestamp", "source"]
+    list_display = ["id", "shipment", "status", "event_timestamp", "source"]
 
 
 @admin.register(models.Driver)

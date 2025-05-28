@@ -13,6 +13,8 @@ class GPSDeviceAdmin(ModelAdmin):
         "created_at",
     ]
 
+    list_select_related = ["assigned_vehicle", "assigned_vehicle__carrier"]
+
 
 @admin.register(models.GPSTrackingPing)
 class GPSTrackingPingAdmin(ModelAdmin):
@@ -38,4 +40,12 @@ class GPSTrackingEventAdmin(ModelAdmin):
         "location",
         "note",
         "created_at",
+    ]
+
+    list_select_related = [
+        "gps_device",
+        "vehicle__carrier",
+        "shipment__origin",
+        "shipment__destination",
+        "location",
     ]
