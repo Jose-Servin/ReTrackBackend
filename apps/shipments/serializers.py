@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from apps.shipments.models import Carrier, CarrierContact
+from .models import Carrier, CarrierContact
 
 
 class CarrierContactSerializer(serializers.ModelSerializer):
@@ -19,6 +19,7 @@ class CarrierContactSerializer(serializers.ModelSerializer):
 
 
 class CarrierSerializer(serializers.ModelSerializer):
+    # TODO:Prevent updating mc_number
     contacts = CarrierContactSerializer(many=True, read_only=True)
 
     class Meta:
