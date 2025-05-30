@@ -54,6 +54,7 @@ INSTALLED_APPS = [
     "django.contrib.messages",
     "django.contrib.staticfiles",
     "debug_toolbar",
+    "rest_framework",
     "apps.core",
     "apps.shipments",
     "apps.attachments",
@@ -157,6 +158,10 @@ AUTH_USER_MODEL = "core.User"
 
 MEDIA_URL = "/media/"
 MEDIA_ROOT = os.path.join(BASE_DIR, "media")
+
+REST_FRAMEWORK = {
+    "COERCE_DECIMAL_TO_STRING": False,
+}
 
 UNFOLD = {
     "SITE_HEADER": "ReTrackLogistics",

@@ -3,6 +3,7 @@ Django==5.2
 django-debug-toolbar==5.1.0
 django-phonenumber-field==8.1.0
 django-unfold==0.57.0
+djangorestframework==3.16.0
 graphviz==0.20.3
 phonenumberslite==9.0.5
 psycopg2==2.9.10
