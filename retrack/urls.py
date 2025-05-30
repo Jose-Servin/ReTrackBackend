@@ -26,6 +26,7 @@ admin.site.site_header = "ReTrackBackend"
 
 urlpatterns = [
     path("admin/", admin.site.urls),
+    path("api/resources/", include("apps.shipments.urls")),
     path("__debug__/", include(debug_toolbar.urls)),
 ]
 
