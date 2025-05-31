@@ -33,17 +33,49 @@ def carrier_detail(request, pk) -> Response:
         serializer.save()
         return Response(serializer.data, status=status.HTTP_200_OK)
     elif request.method == "DELETE":
-        if carrier.contacts.count() > 0:
+        driver_cnt = carrier.drivers.count()
+        vehicle_cnt = carrier.vehicles.count()
+        contact_cnt = carrier.contacts.count()
+
+        if contact_cnt > 0 or driver_cnt > 0 or vehicle_cnt > 0:
             return Response(
-                {"error": "Cannot delete carrier with associated contacts."},
+                {
+                    "error": "Cannot delete carrier with associated records.",
+                    "contacts": contact_cnt,
+                    "drivers": driver_cnt,
+                    "vehicles": vehicle_cnt,
+                },
                 status=status.HTTP_400_BAD_REQUEST,
             )
         carrier.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
-@api_view()
+@api_view(["GET", "POST"])
 def carrier_contact_list(request) -> Response:
-    qs = CarrierContact.objects.all()
-    serializer = CarrierContactSerializer(qs, many=True)
-    return Response(serializer.data)
+    if request.method == "GET":
+        qs = CarrierContact.objects.all().select_related("carrier")
+        serializer = CarrierContactSerializer(qs, many=True)
+        return Response(serializer.data)
+    elif request.method == "POST":
+        serializer = CarrierContactSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+
+@api_view(["GET", "PUT", "DELETE"])
+def carrier_contact_detail(request, pk) -> Response:
+    contact = get_object_or_404(CarrierContact, pk=pk)
+
+    if request.method == "GET":
+        serializer = CarrierContactSerializer(contact)
+        return Response(serializer.data)
+    elif request.method == "PUT":
+        serializer = CarrierContactSerializer(contact, data=request.data)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response(serializer.data, status=status.HTTP_200_OK)
+    elif request.method == "DELETE":
+        contact.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)

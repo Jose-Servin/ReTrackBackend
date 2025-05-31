@@ -35,9 +35,14 @@ class Carrier(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
-    # TODO: add a unique contraint on name and mc_number
-
     class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["name", "mc_number"],
+                name="unique_carrier_name_and_mc_number",
+                violation_error_message="A carrier with this name and MC number already exists.",
+            )
+        ]
         ordering = ["name"]
 
     def __str__(self) -> str:
@@ -94,12 +99,14 @@ class CarrierContact(models.Model):
         BILLING = "BILLING", "Billing"
         SAFETY = "SAFETY", "Safety"
 
+    # TODO: add a unique_contact_name_per_carrier constraint
     carrier = models.ForeignKey(
         "Carrier", on_delete=models.PROTECT, related_name="contacts"
     )
     first_name = models.CharField(max_length=255)
     last_name = models.CharField(max_length=255)
     email = models.EmailField(unique=True)
+    # TODO: change this to a simple regex validator
     phone_number = PhoneNumberField(blank=True, null=True, region="US")
     role = models.CharField(max_length=20, choices=Role.choices, default=Role.DISPATCH)
     is_primary = models.BooleanField(default=False)
