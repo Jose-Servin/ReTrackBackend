@@ -95,7 +95,7 @@ class CarrierContact(models.Model):
         SAFETY = "SAFETY", "Safety"
 
     carrier = models.ForeignKey(
-        "Carrier", on_delete=models.CASCADE, related_name="contacts"
+        "Carrier", on_delete=models.PROTECT, related_name="contacts"
     )
     first_name = models.CharField(max_length=255)
     last_name = models.CharField(max_length=255)
@@ -149,7 +149,7 @@ class Driver(models.Model):
     phone_number = PhoneNumberField(blank=True, null=True, region="US")
     email = models.EmailField(unique=True)
     carrier = models.ForeignKey(
-        Carrier, on_delete=models.CASCADE, related_name="drivers"
+        Carrier, on_delete=models.PROTECT, related_name="drivers"
     )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -178,7 +178,7 @@ class Vehicle(models.Model):
     """
 
     carrier = models.ForeignKey(
-        Carrier, on_delete=models.CASCADE, related_name="vehicles"
+        Carrier, on_delete=models.PROTECT, related_name="vehicles"
     )
     plate_number = models.CharField(
         max_length=20, unique=True, validators=[plate_validator]
@@ -301,7 +301,7 @@ class ShipmentStatusEvent(models.Model):
         CANCELLED = "cancelled", "Cancelled"
 
     shipment = models.ForeignKey(
-        "Shipment", on_delete=models.PROTECT, related_name="status_events"
+        "Shipment", on_delete=models.CASCADE, related_name="status_events"
     )
     status = models.CharField(max_length=20, choices=Status.choices)
     event_timestamp = models.DateTimeField(default=timezone.now)

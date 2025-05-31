@@ -32,6 +32,14 @@ def carrier_detail(request, pk) -> Response:
         serializer.is_valid(raise_exception=True)
         serializer.save()
         return Response(serializer.data, status=status.HTTP_200_OK)
+    elif request.method == "DELETE":
+        if carrier.contacts.count() > 0:
+            return Response(
+                {"error": "Cannot delete carrier with associated contacts."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        carrier.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 @api_view()
