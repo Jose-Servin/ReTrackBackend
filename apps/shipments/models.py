@@ -11,6 +11,10 @@ plate_validator = RegexValidator(
     regex=r"^[A-Za-z0-9-]{1,20}$",
     message="Enter a valid plate number using letters, numbers, or hyphens only (no spaces or special characters).",
 )
+phone_validator = RegexValidator(
+    regex=r"^\d{3}-?\d{3}-?\d{4}$",
+    message="Enter a 10-digit phone number in format 555-123-4567 or 5551234567.",
+)
 
 
 class Carrier(models.Model):
@@ -99,15 +103,19 @@ class CarrierContact(models.Model):
         BILLING = "BILLING", "Billing"
         SAFETY = "SAFETY", "Safety"
 
-    # TODO: add a unique_contact_name_per_carrier constraint
     carrier = models.ForeignKey(
         "Carrier", on_delete=models.PROTECT, related_name="contacts"
     )
     first_name = models.CharField(max_length=255)
     last_name = models.CharField(max_length=255)
     email = models.EmailField(unique=True)
-    # TODO: change this to a simple regex validator
-    phone_number = PhoneNumberField(blank=True, null=True, region="US")
+    phone_number = models.CharField(
+        max_length=12,
+        validators=[phone_validator],
+        blank=True,
+        null=True,
+        help_text="Format: 832-123-4567 or 8321234567",
+    )
     role = models.CharField(max_length=20, choices=Role.choices, default=Role.DISPATCH)
     is_primary = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -119,7 +127,11 @@ class CarrierContact(models.Model):
                 fields=["carrier"],
                 condition=models.Q(is_primary=True),
                 name="unique_primary_contact_per_carrier",
-            )
+            ),
+            models.UniqueConstraint(
+                fields=["carrier", "first_name", "last_name"],
+                name="unique_contact_name_per_carrier",
+            ),
         ]
 
     def __str__(self) -> str:
@@ -135,6 +147,11 @@ class CarrierContact(models.Model):
                 existing = existing.exclude(pk=self.pk)  # skip self during edit
             if existing.exists():
                 raise ValidationError("This carrier already has a primary contact.")
+
+    def save(self, *args, **kwargs) -> None:
+        if self.phone_number:
+            self.phone_number = self.phone_number.replace("-", "")
+        super().save(*args, **kwargs)
 
 
 class Driver(models.Model):

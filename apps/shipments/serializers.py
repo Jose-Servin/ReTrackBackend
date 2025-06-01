@@ -1,5 +1,4 @@
 from rest_framework import serializers
-from phonenumber_field.serializerfields import PhoneNumberField
 from .models import Carrier, CarrierContact
 
 
@@ -15,7 +14,6 @@ class SimpleCarrierSerializer(serializers.ModelSerializer):
 
 class CarrierContactSerializer(serializers.ModelSerializer):
     associated_carrier = SimpleCarrierSerializer(read_only=True, source="carrier")
-    phone_number = PhoneNumberField(region="US", allow_null=True, required=False)
 
     class Meta:
         model = CarrierContact
@@ -27,11 +25,43 @@ class CarrierContactSerializer(serializers.ModelSerializer):
             "phone_number",
             "role",
             "is_primary",
-            "carrier",
-            "associated_carrier",
+            "carrier",  # This field is used for creating/updating the contact
+            "associated_carrier",  # This field provides a read-only reference to the carrier
             "created_at",
             "updated_at",
         ]
+
+    def validate(self, attrs):
+        """
+        Prevent multiple primary contacts for the same carrier.
+
+        This method runs after field-level validation and receives all validated input as `attrs`.
+        It applies cross-field logic to ensure only one primary contact exists per carrier.
+        """
+        is_primary = attrs.get("is_primary", False)
+        carrier = attrs.get("carrier")
+
+        # If we're editing an existing contact, this will be the instance; otherwise None
+        instance = getattr(self, "instance", None)
+
+        if is_primary and carrier:
+            # Look for any existing primary contact for the same carrier
+            existing_primary = CarrierContact.objects.filter(
+                carrier=carrier,
+                is_primary=True,
+            )
+
+            # Exclude the current instance if we're editing (not creating)
+            if instance:
+                existing_primary = existing_primary.exclude(pk=instance.pk)
+
+            # If another primary contact exists, block the request
+            if existing_primary.exists():
+                raise serializers.ValidationError(
+                    {"is_primary": "This carrier already has a primary contact."}
+                )
+
+        return attrs
 
 
 class SimpleCarrierContactSerializer(serializers.ModelSerializer):
