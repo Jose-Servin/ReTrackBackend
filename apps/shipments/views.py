@@ -1,3 +1,4 @@
+from ast import List
 from django.shortcuts import get_object_or_404, render
 from django.http import HttpResponse
 from rest_framework.decorators import api_view
@@ -5,19 +6,12 @@ from rest_framework.response import Response
 from rest_framework import status
 from .models import Carrier, CarrierContact
 from .serializers import CarrierContactSerializer, CarrierSerializer
+from rest_framework.generics import ListCreateAPIView
 
 
-@api_view(["GET", "POST"])
-def carrier_list(request) -> Response:
-    if request.method == "GET":
-        qs = Carrier.objects.all().prefetch_related("contacts")
-        serializer = CarrierSerializer(qs, many=True)
-        return Response(serializer.data)
-    elif request.method == "POST":
-        serializer = CarrierSerializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        serializer.save()
-        return Response(serializer.data, status=status.HTTP_201_CREATED)
+class CarrierList(ListCreateAPIView):
+    queryset = Carrier.objects.all().prefetch_related("contacts")
+    serializer_class = CarrierSerializer
 
 
 @api_view(["GET", "PUT", "DELETE"])
