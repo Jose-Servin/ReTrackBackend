@@ -1,8 +1,4 @@
-from ast import List
-from webbrowser import get
 from django.shortcuts import get_object_or_404, render
-from django.http import HttpResponse
-from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from rest_framework import status
 from .models import Carrier, CarrierContact
