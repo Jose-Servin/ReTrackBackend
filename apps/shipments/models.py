@@ -127,11 +127,7 @@ class CarrierContact(models.Model):
                 fields=["carrier"],
                 condition=models.Q(is_primary=True),
                 name="unique_primary_contact_per_carrier",
-            ),
-            models.UniqueConstraint(
-                fields=["carrier", "first_name", "last_name"],
-                name="unique_contact_name_per_carrier",
-            ),
+            )
         ]
 
     def __str__(self) -> str:
@@ -149,8 +145,12 @@ class CarrierContact(models.Model):
                 raise ValidationError("This carrier already has a primary contact.")
 
     def save(self, *args, **kwargs) -> None:
+        # Normalize phone number (strip dashes)
         if self.phone_number:
             self.phone_number = self.phone_number.replace("-", "")
+        # Normalize email to lowercase to enforce case-insensitive uniqueness
+        if self.email:
+            self.email = self.email.lower()
         super().save(*args, **kwargs)
 
 
@@ -214,6 +214,7 @@ class Vehicle(models.Model):
         return self.plate_number
 
     def save(self, *args, **kwargs) -> None:
+        # Normalize plate_number to uppercase to enforce case-insensitive uniqueness
         if self.plate_number:
             self.plate_number = self.plate_number.upper()
         super().save(*args, **kwargs)

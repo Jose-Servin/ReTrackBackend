@@ -1,10 +1,10 @@
 from django.urls import path
+from rest_framework.routers import DefaultRouter
 from . import views
 
+router = DefaultRouter()
+router.register(r"carriers", views.CarrierViewSet, basename="carrier")
+router.register(r"contacts", views.CarrierContactViewSet, basename="carrier-contact")
+
 # URLConf
-urlpatterns = [
-    path("carriers/", views.CarrierList.as_view()),
-    path("carriers/<int:pk>/", views.CarrierDetail.as_view()),
-    path("contacts/", views.CarrierContactList.as_view()),
-    path("contacts/<int:pk>/", views.CarrierContactDetail.as_view()),
-]
+urlpatterns = router.urls
