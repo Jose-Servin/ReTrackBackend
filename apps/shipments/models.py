@@ -474,6 +474,52 @@ class Shipment(models.Model):
     def __str__(self) -> str:
         return f"{self.origin} → {self.destination}"
 
+    def clean(self) -> None:
+        """
+        Validates scheduling and assignment consistency at the model level.
+
+        Raises:
+            ValidationError: If any of the business rules are violated.
+        """
+
+        errors = {}
+
+        # 1. Validate scheduled dates
+        if self.scheduled_pickup and self.scheduled_delivery:
+            if self.scheduled_delivery < self.scheduled_pickup:
+                errors["scheduled_delivery"] = (
+                    "Scheduled delivery cannot be before scheduled pickup."
+                )
+
+        # 2. Validate actual dates
+        if self.actual_pickup and self.actual_delivery:
+            if self.actual_delivery < self.actual_pickup:
+                errors["actual_delivery"] = (
+                    "Actual delivery cannot be before actual pickup."
+                )
+
+        # 3. Ensure driver belongs to carrier (if both are assigned)
+        if self.carrier and self.driver:
+            if self.driver.carrier_id != self.carrier_id:
+                errors["driver"] = (
+                    "Selected driver does not belong to the assigned carrier."
+                )
+
+        # 4. Ensure vehicle belongs to carrier (if both are assigned)
+        if self.carrier and self.vehicle:
+            if self.vehicle.carrier_id != self.carrier_id:
+                errors["vehicle"] = (
+                    "Selected vehicle does not belong to the assigned carrier."
+                )
+
+        # 5. Optional: Prevent origin and destination from being the same
+        if self.origin_id and self.destination_id:
+            if self.origin_id == self.destination_id:
+                errors["destination"] = "Origin and destination cannot be the same."
+
+        if errors:
+            raise ValidationError(errors)
+
     def record_status_event(
         self, new_status, source=None, event_timestamp=None
     ) -> ShipmentStatusEvent:
@@ -502,19 +548,6 @@ class Shipment(models.Model):
 
         self.save(update_fields=["actual_pickup", "actual_delivery", "updated_at"])
         return event
-
-    def clean(self) -> None:
-        # Prevent logically invalid scheduling
-        if self.scheduled_pickup and self.scheduled_delivery:
-            if self.scheduled_delivery < self.scheduled_pickup:
-                raise ValidationError(
-                    "Scheduled delivery cannot be before scheduled pickup."
-                )
-
-        # Prevent logically invalid actual timeline
-        if self.actual_pickup and self.actual_delivery:
-            if self.actual_delivery < self.actual_pickup:
-                raise ValidationError("Actual delivery cannot be before actual pickup.")
 
 
 class ShipmentItem(models.Model):
