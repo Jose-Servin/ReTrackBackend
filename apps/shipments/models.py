@@ -6,6 +6,7 @@ from django.core.exceptions import ValidationError
 from django.core.validators import MinValueValidator
 from phonenumber_field.modelfields import PhoneNumberField
 from django.core.validators import RegexValidator
+from django.db.models import Q, CheckConstraint
 
 plate_validator = RegexValidator(
     regex=r"^[A-Za-z0-9-]{1,20}$",
@@ -127,11 +128,7 @@ class CarrierContact(models.Model):
                 fields=["carrier"],
                 condition=models.Q(is_primary=True),
                 name="unique_primary_contact_per_carrier",
-            ),
-            models.UniqueConstraint(
-                fields=["carrier", "first_name", "last_name"],
-                name="unique_contact_name_per_carrier",
-            ),
+            )
         ]
 
     def __str__(self) -> str:
@@ -149,8 +146,12 @@ class CarrierContact(models.Model):
                 raise ValidationError("This carrier already has a primary contact.")
 
     def save(self, *args, **kwargs) -> None:
+        # Normalize phone number (strip dashes)
         if self.phone_number:
             self.phone_number = self.phone_number.replace("-", "")
+        # Normalize email to lowercase to enforce case-insensitive uniqueness
+        if self.email:
+            self.email = self.email.lower()
         super().save(*args, **kwargs)
 
 
@@ -214,6 +215,7 @@ class Vehicle(models.Model):
         return self.plate_number
 
     def save(self, *args, **kwargs) -> None:
+        # Normalize plate_number to uppercase to enforce case-insensitive uniqueness
         if self.plate_number:
             self.plate_number = self.plate_number.upper()
         super().save(*args, **kwargs)
@@ -237,12 +239,15 @@ class Asset(models.Model):
             - All dimensions must be greater than 0.
         is_fragile (bool): Indicates whether the asset requires special handling due to fragility.
         is_hazardous (bool): Indicates whether the asset is considered hazardous material.
-            - An asset cannot be both fragile and hazardous.
+            - Items may be both fragile and hazardous in certain use cases.
+
         created_at (datetime): Timestamp when the asset was first created.
         updated_at (datetime): Timestamp of the most recent update to the asset.
 
     Properties:
         volume_cubic_in (Decimal): The total volume of the item in cubic inches.
+        needs_special_handling (bool): True if the item is both fragile and hazardous,
+            which may require custom handling, packaging, or compliance workflows.
     """
 
     name = models.CharField(max_length=255)
@@ -280,13 +285,17 @@ class Asset(models.Model):
     def __str__(self) -> str:
         return self.name
 
-    def clean(self) -> None:
-        if self.is_fragile and self.is_hazardous:
-            raise ValidationError("An asset cannot be both fragile and hazardous.")
-
     @property
     def volume_cubic_in(self) -> Decimal:
         return self.length_in * self.width_in * self.height_in
+
+    @property
+    def needs_special_handling(self) -> bool:
+        """
+        Returns True if the asset is both fragile and hazardous,
+        signaling that it may require additional compliance or safety measures.
+        """
+        return self.is_fragile and self.is_hazardous
 
 
 class ShipmentStatusEvent(models.Model):
@@ -298,6 +307,7 @@ class ShipmentStatusEvent(models.Model):
         status (str): The status value at this point in time (e.g., Pending, In Transit, Delivered).
         event_timestamp (datetime): When the event occurred (can be backfilled or real-time).
         source (str): Optional system or user responsible for the event.
+        notes (str): Optional note related to a particular event.
         created_at (datetime): When the record was created.
         updated_at (datetime): When the record was last updated.
 
@@ -334,6 +344,12 @@ class ShipmentStatusEvent(models.Model):
         blank=True,
         null=True,
         help_text="System or user that triggered this status change",
+    )
+    notes = models.TextField(
+        max_length=500,
+        blank=True,
+        null=True,
+        help_text="Optional notes about this status event.",
     )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -523,6 +539,7 @@ class ShipmentItem(models.Model):
     Validation:
         - Quantity must be at least 1.
         - Unit weight must be greater than 0.
+        - These checks are enforced via field-level validators and a clean() method for better messaging.
 
     Notes:
         This model stores a denormalized unit weight to preserve historical accuracy,
@@ -552,3 +569,22 @@ class ShipmentItem(models.Model):
 
     def __str__(self) -> str:
         return self.asset.name
+
+    def clean(self):
+        """
+        Additional validation beyond field-level checks.
+
+        Ensures:
+        - Quantity is at least 1.
+        - Unit weight is a positive value.
+        """
+        errors = {}
+
+        if self.quantity < 1:
+            errors["quantity"] = "Quantity must be at least 1."
+
+        if self.unit_weight_lb <= 0:
+            errors["unit_weight_lb"] = "Unit weight must be a positive value."
+
+        if errors:
+            raise ValidationError(errors)

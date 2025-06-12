@@ -4,14 +4,15 @@ from rest_framework import status
 from .models import Carrier, CarrierContact
 from .serializers import CarrierContactSerializer, CarrierSerializer
 from rest_framework.generics import ListCreateAPIView, RetrieveUpdateDestroyAPIView
+from rest_framework.viewsets import ModelViewSet
 
 
-class CarrierList(ListCreateAPIView):
-    queryset = Carrier.objects.all().prefetch_related("contacts")
-    serializer_class = CarrierSerializer
+class CarrierViewSet(ModelViewSet):
+    """
+    ViewSet for managing carriers.
+    Provides list, create, retrieve, update, and delete operations.
+    """
 
-
-class CarrierDetail(RetrieveUpdateDestroyAPIView):
     queryset = Carrier.objects.all().prefetch_related("contacts")
     serializer_class = CarrierSerializer
 
@@ -35,11 +36,21 @@ class CarrierDetail(RetrieveUpdateDestroyAPIView):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
-class CarrierContactList(ListCreateAPIView):
+class CarrierContactViewSet(ModelViewSet):
+    """
+    ViewSet for managing carrier contacts.
+    Provides list, create, retrieve, update, and delete operations.
+    """
+
     queryset = CarrierContact.objects.all().select_related("carrier")
     serializer_class = CarrierContactSerializer
 
-
-class CarrierContactDetail(RetrieveUpdateDestroyAPIView):
-    queryset = CarrierContact.objects.all().select_related("carrier")
-    serializer_class = CarrierContactSerializer
+    def delete(self, request, pk) -> Response:
+        contact = get_object_or_404(CarrierContact, pk=pk)
+        if contact.is_primary:
+            return Response(
+                {"error": "Cannot delete primary contact."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        contact.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
