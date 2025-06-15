@@ -13,10 +13,10 @@ class CarrierViewSet(ModelViewSet):
     Provides list, create, retrieve, update, and delete operations.
     """
 
-    queryset = Carrier.objects.all().prefetch_related("contacts")
+    queryset = Carrier.objects.all().prefetch_related("contacts").order_by("id")
     serializer_class = CarrierSerializer
 
-    def delete(self, request, pk) -> Response:
+    def destroy(self, request, pk) -> Response:
         carrier = get_object_or_404(Carrier, pk=pk)
         driver_cnt = carrier.drivers.count()
         vehicle_cnt = carrier.vehicles.count()
@@ -42,10 +42,10 @@ class CarrierContactViewSet(ModelViewSet):
     Provides list, create, retrieve, update, and delete operations.
     """
 
-    queryset = CarrierContact.objects.all().select_related("carrier")
+    queryset = CarrierContact.objects.all().select_related("carrier").order_by("id")
     serializer_class = CarrierContactSerializer
 
-    def delete(self, request, pk) -> Response:
+    def destroy(self, request, pk) -> Response:
         contact = get_object_or_404(CarrierContact, pk=pk)
         if contact.is_primary:
             return Response(

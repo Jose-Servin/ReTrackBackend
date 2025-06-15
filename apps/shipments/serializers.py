@@ -88,9 +88,8 @@ class CarrierSerializer(serializers.ModelSerializer):
             "contacts",
         ]
 
-    def update(self, instance, validated_data):
-        if "mc_number" in validated_data:
-            raise serializers.ValidationError(
-                {"mc_number": "This field cannot be updated once set."}
-            )
-        return super().update(instance, validated_data)
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Dynaically make mc_number read-only
+        if getattr(self, "instance", None) is not None:
+            self.fields["mc_number"].read_only = True

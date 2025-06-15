@@ -34,7 +34,7 @@ class Carrier(models.Model):
     """
 
     name = models.CharField(max_length=255)
-    mc_number = models.CharField(max_length=50)
+    mc_number = models.CharField(max_length=50, unique=True)
     # TODO: replace with FK to core.User when model is defined
     # account_managers
     created_at = models.DateTimeField(auto_now_add=True)
