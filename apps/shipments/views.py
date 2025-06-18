@@ -1,8 +1,14 @@
 from django.shortcuts import get_object_or_404, render
 from rest_framework.response import Response
 from rest_framework import status
-from .models import Carrier, CarrierContact
-from .serializers import CarrierContactSerializer, CarrierSerializer
+from .models import Carrier, CarrierContact, Driver, Vehicle, Asset
+from .serializers import (
+    CarrierContactSerializer,
+    CarrierSerializer,
+    DriverSerializer,
+    VehicleSerializer,
+    AssetSerializer,
+)
 from rest_framework.generics import ListCreateAPIView, RetrieveUpdateDestroyAPIView
 from rest_framework.viewsets import ModelViewSet
 
@@ -54,3 +60,33 @@ class CarrierContactViewSet(ModelViewSet):
             )
         contact.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class DriverViewSet(ModelViewSet):
+    """
+    ViewSet for managing drivers.
+    Provides list, create, retrieve, update, and delete operations.
+    """
+
+    queryset = Driver.objects.all().select_related("carrier").order_by("id")
+    serializer_class = DriverSerializer
+
+
+class VehicleViewSet(ModelViewSet):
+    """
+    ViewSet for managing vehicles.
+    Provides list, create, retrieve, update, and delete operations.
+    """
+
+    queryset = Vehicle.objects.all().select_related("carrier").order_by("id")
+    serializer_class = VehicleSerializer
+
+
+class AssetViewSet(ModelViewSet):
+    """
+    ViewSet for managing assets.
+    Provides list, create, retrieve, update, and delete operations.
+    """
+
+    queryset = Asset.objects.all().order_by("id")
+    serializer_class = AssetSerializer

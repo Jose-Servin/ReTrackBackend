@@ -1,12 +1,13 @@
 from decimal import Decimal
 from typing import Literal
+from autoslug import AutoSlugField
 from django.db import models
 from django.utils import timezone
 from django.core.exceptions import ValidationError
 from django.core.validators import MinValueValidator
-from phonenumber_field.modelfields import PhoneNumberField
 from django.core.validators import RegexValidator
 from django.db.models import Q, CheckConstraint
+
 
 plate_validator = RegexValidator(
     regex=r"^[A-Za-z0-9-]{1,20}$",
@@ -171,7 +172,13 @@ class Driver(models.Model):
 
     first_name = models.CharField(max_length=255)
     last_name = models.CharField(max_length=255)
-    phone_number = PhoneNumberField(blank=True, null=True, region="US")
+    phone_number = models.CharField(
+        max_length=12,
+        validators=[phone_validator],
+        blank=True,
+        null=True,
+        help_text="Format: 832-123-4567 or 8321234567",
+    )
     email = models.EmailField(unique=True)
     carrier = models.ForeignKey(
         Carrier, on_delete=models.PROTECT, related_name="drivers"
@@ -183,6 +190,9 @@ class Driver(models.Model):
         return f"{self.first_name} {self.last_name}"
 
     def save(self, *args, **kwargs) -> None:
+        # Normalize phone number (strip dashes)
+        if self.phone_number:
+            self.phone_number = self.phone_number.replace("-", "")
         # Normalize email to lowercase to enforce case-insensitive uniqueness
         if self.email:
             self.email = self.email.lower()
@@ -250,9 +260,15 @@ class Asset(models.Model):
             which may require custom handling, packaging, or compliance workflows.
     """
 
+    # TODO: add a sku field to the model
     name = models.CharField(max_length=255)
     description = models.TextField(blank=True)
-    slug = models.SlugField(unique=True)
+    slug = AutoSlugField(
+        populate_from="name",
+        unique=True,
+        always_update=False,  # set once on create
+        blank=True,  # allows omitting in forms/serializers
+    )
     weight_lb = models.DecimalField(
         max_digits=7,
         decimal_places=2,

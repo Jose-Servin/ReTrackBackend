@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Carrier, CarrierContact
+from .models import Carrier, CarrierContact, Driver, Vehicle, Asset
 
 
 class SimpleCarrierSerializer(serializers.ModelSerializer):
@@ -93,3 +93,61 @@ class CarrierSerializer(serializers.ModelSerializer):
         # Dynaically make mc_number read-only
         if getattr(self, "instance", None) is not None:
             self.fields["mc_number"].read_only = True
+
+
+class DriverSerializer(serializers.ModelSerializer):
+    """
+    Serializer for the Driver model.
+    """
+
+    class Meta:
+        model = Driver
+        fields = [
+            "id",
+            "first_name",
+            "last_name",
+            "phone_number",
+            "email",
+            "carrier",
+            "created_at",
+            "updated_at",
+        ]
+
+
+class VehicleSerializer(serializers.ModelSerializer):
+    """
+    Serializer for the Vehicle model.
+    """
+
+    class Meta:
+        model = Vehicle
+        fields = [
+            "id",
+            "plate_number",
+            "carrier",
+            "created_at",
+            "updated_at",
+        ]
+
+
+class AssetSerializer(serializers.ModelSerializer):
+    """
+    Serializer for the Asset model.
+    """
+
+    class Meta:
+        model = Asset
+        fields = [
+            "id",
+            "name",
+            "slug",
+            "description",
+            "weight_lb",
+            "length_in",
+            "width_in",
+            "height_in",
+            "is_fragile",
+            "is_hazardous",
+            "created_at",
+            "updated_at",
+        ]
