@@ -7,6 +7,7 @@ from django.core.exceptions import ValidationError
 from django.core.validators import MinValueValidator
 from django.core.validators import RegexValidator
 from django.db.models import Q, CheckConstraint
+from django.db.models.functions import Upper
 
 
 plate_validator = RegexValidator(
@@ -16,6 +17,17 @@ plate_validator = RegexValidator(
 phone_validator = RegexValidator(
     regex=r"^\d{3}-?\d{3}-?\d{4}$",
     message="Enter a 10-digit phone number in format 555-123-4567 or 5551234567.",
+)
+
+sku_validator = RegexValidator(
+    regex=r"^[aA][sS][tT]\d{4}$",
+    message="SKU must be in the format 'AST' followed by 4 digits (e.g., AST0001).",
+)
+
+
+mc_number_validator = RegexValidator(
+    regex=r"^MC\d{6}$",
+    message="MC number must be in the format 'MC' followed by 6 digits (e.g., MC123456).",
 )
 
 
@@ -35,6 +47,7 @@ class Carrier(models.Model):
     """
 
     name = models.CharField(max_length=255)
+    # TODO: apply this unique constraint case-insensitively
     mc_number = models.CharField(max_length=50, unique=True)
     # TODO: replace with FK to core.User when model is defined
     # account_managers
@@ -260,8 +273,8 @@ class Asset(models.Model):
             which may require custom handling, packaging, or compliance workflows.
     """
 
-    # TODO: add a sku field to the model
     name = models.CharField(max_length=255)
+    sku = models.CharField(max_length=64, validators=[sku_validator])
     description = models.TextField(blank=True)
     slug = AutoSlugField(
         populate_from="name",
@@ -298,8 +311,35 @@ class Asset(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
+    class Meta:
+        constraints = [models.UniqueConstraint(Upper("sku"), name="unique_upper_sku")]
+
     def __str__(self) -> str:
         return self.name
+
+    def save(self, *args, **kwargs):
+        self.full_clean()  # Triggers `clean()` before saving
+        if self.sku:
+            self.sku = self.sku.upper().strip()
+        super().save(*args, **kwargs)
+
+    def clean(self):
+        super().clean()
+
+        if self.sku:
+            # Normalize to match how the uniqueness constraint is enforced
+            normalized_sku = self.sku.upper().strip()
+
+            # Exclude self to avoid false positives during updates
+            existing = Asset.objects.annotate(normalized_sku=Upper("sku")).filter(
+                normalized_sku=normalized_sku
+            )
+
+            if self.pk:
+                existing = existing.exclude(pk=self.pk)
+
+            if existing.exists():
+                raise ValidationError({"sku": "This SKU already exists."})
 
     @property
     def volume_cubic_in(self) -> Decimal:

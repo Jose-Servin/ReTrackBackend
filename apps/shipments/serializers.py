@@ -1,4 +1,5 @@
 from rest_framework import serializers
+from django.db.models.functions import Upper
 from .models import Carrier, CarrierContact, Driver, Vehicle, Asset
 
 
@@ -141,6 +142,7 @@ class AssetSerializer(serializers.ModelSerializer):
             "id",
             "name",
             "slug",
+            "sku",
             "description",
             "weight_lb",
             "length_in",
@@ -151,3 +153,20 @@ class AssetSerializer(serializers.ModelSerializer):
             "created_at",
             "updated_at",
         ]
+
+    def validate_sku(self, value):
+        """
+        Ensure SKU is unique (case-insensitive) and normalized to uppercase.
+        """
+        normalized = value.upper().strip()
+
+        qs = Asset.objects.annotate(norm_sku=Upper("sku")).filter(norm_sku=normalized)
+
+        # Exclude the current instance during updates
+        if self.instance:
+            qs = qs.exclude(pk=self.instance.pk)
+
+        if qs.exists():
+            raise serializers.ValidationError("This SKU already exists.")
+
+        return normalized
