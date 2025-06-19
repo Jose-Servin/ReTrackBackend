@@ -26,7 +26,7 @@ sku_validator = RegexValidator(
 
 
 mc_number_validator = RegexValidator(
-    regex=r"^MC\d{6}$",
+    regex=r"^[mM][cC]\d{6}$",
     message="MC number must be in the format 'MC' followed by 6 digits (e.g., MC123456).",
 )
 
@@ -47,25 +47,41 @@ class Carrier(models.Model):
     """
 
     name = models.CharField(max_length=255)
-    # TODO: apply this unique constraint case-insensitively
-    mc_number = models.CharField(max_length=50, unique=True)
+    mc_number = models.CharField(max_length=50, validators=[mc_number_validator])
     # TODO: replace with FK to core.User when model is defined
     # account_managers
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
-        constraints = [
-            models.UniqueConstraint(
-                fields=["name", "mc_number"],
-                name="unique_carrier_name_and_mc_number",
-                violation_error_message="A carrier with this name and MC number already exists.",
-            )
-        ]
         ordering = ["name"]
 
     def __str__(self) -> str:
         return self.name
+
+    def save(self, *args, **kwargs):
+        self.full_clean()  # Triggers `clean()` before saving
+        if self.mc_number:
+            self.mc_number = self.mc_number.upper().strip()
+        super().save(*args, **kwargs)
+
+    def clean(self):
+        super().clean()
+
+        if self.mc_number:
+            # Normalize to match how the uniqueness constraint is enforced
+            normalized_mc_number = self.mc_number.upper().strip()
+
+            # Exclude self to avoid false positives during updates
+            existing = Carrier.objects.annotate(
+                normalized_mc_number=Upper("mc_number")
+            ).filter(normalized_mc_number=normalized_mc_number)
+
+            if self.pk:
+                existing = existing.exclude(pk=self.pk)
+
+            if existing.exists():
+                raise ValidationError({"mc_number": "This MC number already exists."})
 
     @property
     def available_drivers(self) -> int:

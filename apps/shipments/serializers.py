@@ -95,6 +95,25 @@ class CarrierSerializer(serializers.ModelSerializer):
         if getattr(self, "instance", None) is not None:
             self.fields["mc_number"].read_only = True
 
+    def validate_mc_number(self, value):
+        """
+        Ensure MC number is unique (case-insensitive) and normalized to uppercase.
+        """
+        normalized = value.upper().strip()
+
+        qs = Carrier.objects.annotate(norm_mc=Upper("mc_number")).filter(
+            norm_mc=normalized
+        )
+
+        # Exclude the current instance during updates
+        if self.instance:
+            qs = qs.exclude(pk=self.instance.pk)
+
+        if qs.exists():
+            raise serializers.ValidationError("This MC Number already exists.")
+
+        return normalized
+
 
 class DriverSerializer(serializers.ModelSerializer):
     """
