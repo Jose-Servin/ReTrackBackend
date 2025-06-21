@@ -208,6 +208,7 @@ class ShipmentSerializer(serializers.ModelSerializer):
     class Meta:
         model = Shipment
         fields = [
+            "id",
             "origin",
             "destination",
             "carrier",
@@ -220,3 +221,48 @@ class ShipmentSerializer(serializers.ModelSerializer):
             "created_at",
             "updated_at",
         ]
+
+    def validate(self, data):
+        errors = {}
+
+        scheduled_pickup = data.get("scheduled_pickup")
+        scheduled_delivery = data.get("scheduled_delivery")
+        actual_pickup = data.get("actual_pickup")
+        actual_delivery = data.get("actual_delivery")
+        carrier = data.get("carrier")
+        driver = data.get("driver")
+        vehicle = data.get("vehicle")
+        origin = data.get("origin")
+        destination = data.get("destination")
+
+        # 1. Scheduled delivery must not be before pickup
+        if scheduled_pickup and scheduled_delivery:
+            if scheduled_delivery < scheduled_pickup:
+                errors["scheduled_delivery"] = (
+                    "Scheduled delivery cannot be before pickup."
+                )
+
+        # 2. Actual delivery must not be before pickup
+        if actual_pickup and actual_delivery:
+            if actual_delivery < actual_pickup:
+                errors["actual_delivery"] = "Actual delivery cannot be before pickup."
+
+        # 3. Driver must belong to carrier
+        if carrier and driver:
+            if driver.carrier_id != carrier.id:
+                errors["driver"] = "Driver does not belong to the selected carrier."
+
+        # 4. Vehicle must belong to carrier
+        if carrier and vehicle:
+            if vehicle.carrier_id != carrier.id:
+                errors["vehicle"] = "Vehicle does not belong to the selected carrier."
+
+        # 5. Origin and destination must not be the same
+        if origin and destination:
+            if origin.id == destination.id:
+                errors["destination"] = "Origin and destination cannot be the same."
+
+        if errors:
+            raise serializers.ValidationError(errors)
+
+        return data
