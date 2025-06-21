@@ -664,6 +664,8 @@ class ShipmentItem(models.Model):
         decimal_places=2,
         validators=[MinValueValidator(0.01)],
         help_text="Weight per unit in pounds",
+        blank=True,
+        null=True,
     )
 
     notes = models.TextField(blank=True, null=True)
@@ -695,9 +697,6 @@ class ShipmentItem(models.Model):
 
         if self.quantity < 1:
             errors["quantity"] = "Quantity must be at least 1."
-
-        if self.unit_weight_lb <= 0:
-            errors["unit_weight_lb"] = "Unit weight must be a positive value."
 
         if errors:
             raise ValidationError(errors)

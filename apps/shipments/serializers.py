@@ -272,4 +272,13 @@ class ShipmentItemSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = ShipmentItem
-        fields = ["id", "shipment", "asset", "quantity", "unit_weight_lb", "notes"]
+        fields = [
+            "id",
+            "shipment",
+            "asset",
+            "quantity",
+            "unit_weight_lb",
+            "notes",
+            "created_at",
+            "updated_at",
+        ]
