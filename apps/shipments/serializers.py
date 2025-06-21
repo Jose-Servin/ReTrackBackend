@@ -1,6 +1,15 @@
 from rest_framework import serializers
 from django.db.models.functions import Upper
-from .models import Carrier, CarrierContact, Driver, Vehicle, Asset
+from .models import (
+    Carrier,
+    CarrierContact,
+    Driver,
+    Vehicle,
+    Asset,
+    Shipment,
+    ShipmentItem,
+    ShipmentStatusEvent,
+)
 
 
 class SimpleCarrierSerializer(serializers.ModelSerializer):
@@ -189,3 +198,25 @@ class AssetSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError("This SKU already exists.")
 
         return normalized
+
+
+class ShipmentSerializer(serializers.ModelSerializer):
+    """
+    Serializer for the Shipment model.
+    """
+
+    class Meta:
+        model = Shipment
+        fields = [
+            "origin",
+            "destination",
+            "carrier",
+            "driver",
+            "vehicle",
+            "scheduled_pickup",
+            "scheduled_delivery",
+            "actual_pickup",
+            "actual_delivery",
+            "created_at",
+            "updated_at",
+        ]

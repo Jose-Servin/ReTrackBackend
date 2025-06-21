@@ -1,13 +1,14 @@
 from django.shortcuts import get_object_or_404, render
 from rest_framework.response import Response
 from rest_framework import status
-from .models import Carrier, CarrierContact, Driver, Vehicle, Asset
+from .models import Carrier, CarrierContact, Driver, Vehicle, Asset, Shipment
 from .serializers import (
     CarrierContactSerializer,
     CarrierSerializer,
     DriverSerializer,
     VehicleSerializer,
     AssetSerializer,
+    ShipmentSerializer,
 )
 from rest_framework.generics import ListCreateAPIView, RetrieveUpdateDestroyAPIView
 from rest_framework.viewsets import ModelViewSet
@@ -90,3 +91,17 @@ class AssetViewSet(ModelViewSet):
 
     queryset = Asset.objects.all().order_by("id")
     serializer_class = AssetSerializer
+
+
+class ShipmentViewSet(ModelViewSet):
+    """
+    ViewSet for managing shipments.
+    Provides list, create, retrieve, update, and delete operations.
+    """
+
+    queryset = (
+        Shipment.objects.all()
+        .select_related("carrier", "driver", "vehicle")
+        .order_by("id")
+    )
+    serializer_class = ShipmentSerializer
