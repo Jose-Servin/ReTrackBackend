@@ -266,3 +266,10 @@ class ShipmentSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError(errors)
 
         return data
+
+
+class ShipmentItemSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = ShipmentItem
+        fields = ["id", "shipment", "asset", "quantity", "unit_weight_lb", "notes"]

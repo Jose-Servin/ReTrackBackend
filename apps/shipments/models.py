@@ -667,6 +667,8 @@ class ShipmentItem(models.Model):
     )
 
     notes = models.TextField(blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
     @property
     def total_weight(self) -> Decimal:
@@ -674,6 +676,12 @@ class ShipmentItem(models.Model):
 
     def __str__(self) -> str:
         return self.asset.name
+
+    def save(self, *args, **kwargs):
+        # Only snapshot the asset's weight if unit_weight_lb is not already set
+        if self.asset and self.unit_weight_lb in [None, 0]:
+            self.unit_weight_lb = self.asset.weight_lb
+        super().save(*args, **kwargs)
 
     def clean(self):
         """

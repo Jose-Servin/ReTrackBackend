@@ -9,6 +9,7 @@ router.register(r"drivers", views.DriverViewSet, basename="driver")
 router.register(r"vehicles", views.VehicleViewSet, basename="vehicle")
 router.register(r"assets", views.AssetViewSet, basename="asset")
 router.register(r"shipments", views.ShipmentViewSet, basename="shipment")
+router.register(r"shipment-items", views.ShipmentItemViewSet, basename="shipment-item")
 
 # URLConf
 urlpatterns = router.urls
