@@ -1,5 +1,17 @@
 from rest_framework import serializers
-from .models import Carrier, CarrierContact
+from django.db.models.functions import Upper
+from .models import (
+    Carrier,
+    CarrierContact,
+    Driver,
+    Vehicle,
+    Asset,
+    Shipment,
+    ShipmentItem,
+    ShipmentStatusEvent,
+)
+
+from ..locations.models import Location
 
 
 class SimpleCarrierSerializer(serializers.ModelSerializer):
@@ -88,9 +100,239 @@ class CarrierSerializer(serializers.ModelSerializer):
             "contacts",
         ]
 
-    def update(self, instance, validated_data):
-        if "mc_number" in validated_data:
-            raise serializers.ValidationError(
-                {"mc_number": "This field cannot be updated once set."}
-            )
-        return super().update(instance, validated_data)
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Dynaically make mc_number read-only
+        if getattr(self, "instance", None) is not None:
+            self.fields["mc_number"].read_only = True
+
+    def validate_mc_number(self, value):
+        """
+        Ensure MC number is unique (case-insensitive) and normalized to uppercase.
+        """
+        normalized = value.upper().strip()
+
+        qs = Carrier.objects.annotate(norm_mc=Upper("mc_number")).filter(
+            norm_mc=normalized
+        )
+
+        # Exclude the current instance during updates
+        if self.instance:
+            qs = qs.exclude(pk=self.instance.pk)
+
+        if qs.exists():
+            raise serializers.ValidationError("This MC Number already exists.")
+
+        return normalized
+
+
+class DriverSerializer(serializers.ModelSerializer):
+    """
+    Serializer for the Driver model.
+    """
+
+    class Meta:
+        model = Driver
+        fields = [
+            "id",
+            "first_name",
+            "last_name",
+            "phone_number",
+            "email",
+            "carrier",
+            "created_at",
+            "updated_at",
+        ]
+
+
+class VehicleSerializer(serializers.ModelSerializer):
+    """
+    Serializer for the Vehicle model.
+    """
+
+    class Meta:
+        model = Vehicle
+        fields = [
+            "id",
+            "plate_number",
+            "carrier",
+            "created_at",
+            "updated_at",
+        ]
+
+
+class AssetSerializer(serializers.ModelSerializer):
+    """
+    Serializer for the Asset model.
+    """
+
+    class Meta:
+        model = Asset
+        fields = [
+            "id",
+            "name",
+            "slug",
+            "sku",
+            "description",
+            "weight_lb",
+            "length_in",
+            "width_in",
+            "height_in",
+            "is_fragile",
+            "is_hazardous",
+            "created_at",
+            "updated_at",
+        ]
+
+    def validate_sku(self, value):
+        """
+        Ensure SKU is unique (case-insensitive) and normalized to uppercase.
+        """
+        normalized = value.upper().strip()
+
+        qs = Asset.objects.annotate(norm_sku=Upper("sku")).filter(norm_sku=normalized)
+
+        # Exclude the current instance during updates
+        if self.instance:
+            qs = qs.exclude(pk=self.instance.pk)
+
+        if qs.exists():
+            raise serializers.ValidationError("This SKU already exists.")
+
+        return normalized
+
+
+class ShipmentSerializer(serializers.ModelSerializer):
+    """
+    Serializer for the Shipment model.
+    """
+
+    class Meta:
+        model = Shipment
+        fields = [
+            "id",
+            "origin",
+            "destination",
+            "carrier",
+            "driver",
+            "vehicle",
+            "scheduled_pickup",
+            "scheduled_delivery",
+            "actual_pickup",
+            "actual_delivery",
+            "created_at",
+            "updated_at",
+        ]
+
+    def validate(self, data):
+        errors = {}
+
+        scheduled_pickup = data.get("scheduled_pickup")
+        scheduled_delivery = data.get("scheduled_delivery")
+        actual_pickup = data.get("actual_pickup")
+        actual_delivery = data.get("actual_delivery")
+        carrier = data.get("carrier")
+        driver = data.get("driver")
+        vehicle = data.get("vehicle")
+        origin = data.get("origin")
+        destination = data.get("destination")
+
+        # 1. Scheduled delivery must not be before pickup
+        if scheduled_pickup and scheduled_delivery:
+            if scheduled_delivery < scheduled_pickup:
+                errors["scheduled_delivery"] = (
+                    "Scheduled delivery cannot be before pickup."
+                )
+
+        # 2. Actual delivery must not be before pickup
+        if actual_pickup and actual_delivery:
+            if actual_delivery < actual_pickup:
+                errors["actual_delivery"] = "Actual delivery cannot be before pickup."
+
+        # 3. Driver must belong to carrier
+        if carrier and driver:
+            if driver.carrier_id != carrier.id:
+                errors["driver"] = "Driver does not belong to the selected carrier."
+
+        # 4. Vehicle must belong to carrier
+        if carrier and vehicle:
+            if vehicle.carrier_id != carrier.id:
+                errors["vehicle"] = "Vehicle does not belong to the selected carrier."
+
+        # 5. Origin and destination must not be the same
+        if origin and destination:
+            if origin.id == destination.id:
+                errors["destination"] = "Origin and destination cannot be the same."
+
+        if errors:
+            raise serializers.ValidationError(errors)
+
+        return data
+
+
+class SimpleAssetSerializer(serializers.ModelSerializer):
+    """
+    A simple serializer for Asset, used in ShipmentItem.
+    """
+
+    class Meta:
+        model = Asset
+        fields = [
+            "name",
+            "weight_lb",
+        ]
+
+
+class SimpleLocationSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Location
+        fields = ["name"]
+
+
+class SimpleShipmentSerializer(serializers.ModelSerializer):
+    """
+    A simple serializer for Shipment, used in ShipmentItem.
+    """
+
+    origin = SimpleLocationSerializer(read_only=True)
+    destination = SimpleLocationSerializer(read_only=True)
+
+    class Meta:
+        model = Shipment
+        fields = [
+            "origin",
+            "destination",
+        ]
+
+
+class ShipmentItemSerializer(serializers.ModelSerializer):
+    associated_asset = SimpleAssetSerializer(read_only=True, source="asset")
+    associated_shipment = SimpleShipmentSerializer(read_only=True, source="shipment")
+
+    class Meta:
+        model = ShipmentItem
+        fields = [
+            "id",
+            "shipment",  # This field is used for creating/updating the item
+            "associated_shipment",  # Read-only field for the shipment details
+            "asset",  # This field is used for creating/updating the item
+            "associated_asset",  # Read-only field for the asset details
+            "quantity",
+            "unit_weight_lb",
+            "notes",
+            "created_at",
+            "updated_at",
+        ]
+
+
+class ShipmentStatusEventSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = ShipmentStatusEvent
+        fields = ["id", "status", "event_timestamp", "source", "notes"]
+
+    def create(self, validated_data) -> ShipmentStatusEvent:
+        shipment_id = self.context["shipment_id"]
+        return ShipmentStatusEvent.objects.create(
+            shipment_id=shipment_id, **validated_data
+        )

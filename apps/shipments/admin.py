@@ -332,10 +332,11 @@ class VehicleAdmin(ModelAdmin):
 
 @admin.register(models.Asset)
 class AssetAdmin(ModelAdmin):
-    prepopulated_fields = {"slug": ("name",)}
     list_display = [
         "name",
         "description",
+        "slug",
+        "sku",
         "weight_lb",
         "length_in",
         "width_in",

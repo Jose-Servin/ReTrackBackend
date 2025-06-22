@@ -1,12 +1,14 @@
 from decimal import Decimal
 from typing import Literal
+from autoslug import AutoSlugField
 from django.db import models
 from django.utils import timezone
 from django.core.exceptions import ValidationError
 from django.core.validators import MinValueValidator
-from phonenumber_field.modelfields import PhoneNumberField
 from django.core.validators import RegexValidator
 from django.db.models import Q, CheckConstraint
+from django.db.models.functions import Upper
+
 
 plate_validator = RegexValidator(
     regex=r"^[A-Za-z0-9-]{1,20}$",
@@ -15,6 +17,17 @@ plate_validator = RegexValidator(
 phone_validator = RegexValidator(
     regex=r"^\d{3}-?\d{3}-?\d{4}$",
     message="Enter a 10-digit phone number in format 555-123-4567 or 5551234567.",
+)
+
+sku_validator = RegexValidator(
+    regex=r"^[aA][sS][tT]\d{4}$",
+    message="SKU must be in the format 'AST' followed by 4 digits (e.g., AST0001).",
+)
+
+
+mc_number_validator = RegexValidator(
+    regex=r"^[mM][cC]\d{6}$",
+    message="MC number must be in the format 'MC' followed by 6 digits (e.g., MC123456).",
 )
 
 
@@ -34,24 +47,41 @@ class Carrier(models.Model):
     """
 
     name = models.CharField(max_length=255)
-    mc_number = models.CharField(max_length=50)
+    mc_number = models.CharField(max_length=50, validators=[mc_number_validator])
     # TODO: replace with FK to core.User when model is defined
     # account_managers
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
-        constraints = [
-            models.UniqueConstraint(
-                fields=["name", "mc_number"],
-                name="unique_carrier_name_and_mc_number",
-                violation_error_message="A carrier with this name and MC number already exists.",
-            )
-        ]
         ordering = ["name"]
 
     def __str__(self) -> str:
         return self.name
+
+    def save(self, *args, **kwargs):
+        self.full_clean()  # Triggers `clean()` before saving
+        if self.mc_number:
+            self.mc_number = self.mc_number.upper().strip()
+        super().save(*args, **kwargs)
+
+    def clean(self):
+        super().clean()
+
+        if self.mc_number:
+            # Normalize to match how the uniqueness constraint is enforced
+            normalized_mc_number = self.mc_number.upper().strip()
+
+            # Exclude self to avoid false positives during updates
+            existing = Carrier.objects.annotate(
+                normalized_mc_number=Upper("mc_number")
+            ).filter(normalized_mc_number=normalized_mc_number)
+
+            if self.pk:
+                existing = existing.exclude(pk=self.pk)
+
+            if existing.exists():
+                raise ValidationError({"mc_number": "This MC number already exists."})
 
     @property
     def available_drivers(self) -> int:
@@ -171,7 +201,13 @@ class Driver(models.Model):
 
     first_name = models.CharField(max_length=255)
     last_name = models.CharField(max_length=255)
-    phone_number = PhoneNumberField(blank=True, null=True, region="US")
+    phone_number = models.CharField(
+        max_length=12,
+        validators=[phone_validator],
+        blank=True,
+        null=True,
+        help_text="Format: 832-123-4567 or 8321234567",
+    )
     email = models.EmailField(unique=True)
     carrier = models.ForeignKey(
         Carrier, on_delete=models.PROTECT, related_name="drivers"
@@ -183,6 +219,9 @@ class Driver(models.Model):
         return f"{self.first_name} {self.last_name}"
 
     def save(self, *args, **kwargs) -> None:
+        # Normalize phone number (strip dashes)
+        if self.phone_number:
+            self.phone_number = self.phone_number.replace("-", "")
         # Normalize email to lowercase to enforce case-insensitive uniqueness
         if self.email:
             self.email = self.email.lower()
@@ -251,8 +290,14 @@ class Asset(models.Model):
     """
 
     name = models.CharField(max_length=255)
+    sku = models.CharField(max_length=64, validators=[sku_validator])
     description = models.TextField(blank=True)
-    slug = models.SlugField(unique=True)
+    slug = AutoSlugField(
+        populate_from="name",
+        unique=True,
+        always_update=False,  # set once on create
+        blank=True,  # allows omitting in forms/serializers
+    )
     weight_lb = models.DecimalField(
         max_digits=7,
         decimal_places=2,
@@ -282,8 +327,35 @@ class Asset(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
+    class Meta:
+        constraints = [models.UniqueConstraint(Upper("sku"), name="unique_upper_sku")]
+
     def __str__(self) -> str:
         return self.name
+
+    def save(self, *args, **kwargs):
+        self.full_clean()  # Triggers `clean()` before saving
+        if self.sku:
+            self.sku = self.sku.upper().strip()
+        super().save(*args, **kwargs)
+
+    def clean(self):
+        super().clean()
+
+        if self.sku:
+            # Normalize to match how the uniqueness constraint is enforced
+            normalized_sku = self.sku.upper().strip()
+
+            # Exclude self to avoid false positives during updates
+            existing = Asset.objects.annotate(normalized_sku=Upper("sku")).filter(
+                normalized_sku=normalized_sku
+            )
+
+            if self.pk:
+                existing = existing.exclude(pk=self.pk)
+
+            if existing.exists():
+                raise ValidationError({"sku": "This SKU already exists."})
 
     @property
     def volume_cubic_in(self) -> Decimal:
@@ -592,9 +664,13 @@ class ShipmentItem(models.Model):
         decimal_places=2,
         validators=[MinValueValidator(0.01)],
         help_text="Weight per unit in pounds",
+        blank=True,
+        null=True,
     )
 
     notes = models.TextField(blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
     @property
     def total_weight(self) -> Decimal:
@@ -602,6 +678,12 @@ class ShipmentItem(models.Model):
 
     def __str__(self) -> str:
         return self.asset.name
+
+    def save(self, *args, **kwargs):
+        # Only snapshot the asset's weight if unit_weight_lb is not already set
+        if self.asset and self.unit_weight_lb in [None, 0]:
+            self.unit_weight_lb = self.asset.weight_lb
+        super().save(*args, **kwargs)
 
     def clean(self):
         """
@@ -615,9 +697,6 @@ class ShipmentItem(models.Model):
 
         if self.quantity < 1:
             errors["quantity"] = "Quantity must be at least 1."
-
-        if self.unit_weight_lb <= 0:
-            errors["unit_weight_lb"] = "Unit weight must be a positive value."
 
         if errors:
             raise ValidationError(errors)

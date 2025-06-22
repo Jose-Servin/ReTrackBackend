@@ -1,8 +1,28 @@
+from typing import Any
+from django.db.models.manager import BaseManager
 from django.shortcuts import get_object_or_404, render
 from rest_framework.response import Response
 from rest_framework import status
-from .models import Carrier, CarrierContact
-from .serializers import CarrierContactSerializer, CarrierSerializer
+from .models import (
+    Carrier,
+    CarrierContact,
+    Driver,
+    Vehicle,
+    Asset,
+    Shipment,
+    ShipmentItem,
+    ShipmentStatusEvent,
+)
+from .serializers import (
+    CarrierContactSerializer,
+    CarrierSerializer,
+    DriverSerializer,
+    VehicleSerializer,
+    AssetSerializer,
+    ShipmentSerializer,
+    ShipmentItemSerializer,
+    ShipmentStatusEventSerializer,
+)
 from rest_framework.generics import ListCreateAPIView, RetrieveUpdateDestroyAPIView
 from rest_framework.viewsets import ModelViewSet
 
@@ -13,10 +33,10 @@ class CarrierViewSet(ModelViewSet):
     Provides list, create, retrieve, update, and delete operations.
     """
 
-    queryset = Carrier.objects.all().prefetch_related("contacts")
+    queryset = Carrier.objects.all().prefetch_related("contacts").order_by("id")
     serializer_class = CarrierSerializer
 
-    def delete(self, request, pk) -> Response:
+    def destroy(self, request, pk) -> Response:
         carrier = get_object_or_404(Carrier, pk=pk)
         driver_cnt = carrier.drivers.count()
         vehicle_cnt = carrier.vehicles.count()
@@ -42,10 +62,10 @@ class CarrierContactViewSet(ModelViewSet):
     Provides list, create, retrieve, update, and delete operations.
     """
 
-    queryset = CarrierContact.objects.all().select_related("carrier")
+    queryset = CarrierContact.objects.all().select_related("carrier").order_by("id")
     serializer_class = CarrierContactSerializer
 
-    def delete(self, request, pk) -> Response:
+    def destroy(self, request, pk) -> Response:
         contact = get_object_or_404(CarrierContact, pk=pk)
         if contact.is_primary:
             return Response(
@@ -54,3 +74,81 @@ class CarrierContactViewSet(ModelViewSet):
             )
         contact.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class DriverViewSet(ModelViewSet):
+    """
+    ViewSet for managing drivers.
+    Provides list, create, retrieve, update, and delete operations.
+    """
+
+    queryset = Driver.objects.all().select_related("carrier").order_by("id")
+    serializer_class = DriverSerializer
+
+
+class VehicleViewSet(ModelViewSet):
+    """
+    ViewSet for managing vehicles.
+    Provides list, create, retrieve, update, and delete operations.
+    """
+
+    queryset = Vehicle.objects.all().select_related("carrier").order_by("id")
+    serializer_class = VehicleSerializer
+
+
+class AssetViewSet(ModelViewSet):
+    """
+    ViewSet for managing assets.
+    Provides list, create, retrieve, update, and delete operations.
+    """
+
+    queryset = Asset.objects.all().order_by("id")
+    serializer_class = AssetSerializer
+
+
+class ShipmentViewSet(ModelViewSet):
+    """
+    ViewSet for managing shipments.
+    Provides list, create, retrieve, update, and delete operations.
+    """
+
+    queryset = (
+        Shipment.objects.all()
+        .select_related("carrier", "driver", "vehicle")
+        .order_by("id")
+    )
+    serializer_class = ShipmentSerializer
+
+
+class ShipmentItemViewSet(ModelViewSet):
+    """
+    ViewSet for managing shipment items.
+    Provides list, create, retrieve, update, and delete operations.
+    """
+
+    queryset = (
+        ShipmentItem.objects.all()
+        .select_related(
+            "shipment",
+            "shipment__origin",
+            "shipment__destination",
+            "shipment__carrier",
+            "shipment__driver",
+            "shipment__vehicle",
+            "asset",
+        )
+        .order_by("id")
+    )
+    serializer_class = ShipmentItemSerializer
+
+
+class ShipmentStatusEventViewSet(ModelViewSet):
+    serializer_class = ShipmentStatusEventSerializer
+
+    def get_queryset(self) -> BaseManager[ShipmentStatusEvent]:
+        return ShipmentStatusEvent.objects.filter(
+            shipment_id=self.kwargs["shipment_pk"]
+        )
+
+    def get_serializer_context(self) -> dict[str, Any]:
+        return {"shipment_id": self.kwargs["shipment_pk"]}
