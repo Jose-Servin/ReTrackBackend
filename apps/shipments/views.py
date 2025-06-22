@@ -1,3 +1,5 @@
+from typing import Any
+from django.db.models.manager import BaseManager
 from django.shortcuts import get_object_or_404, render
 from rest_framework.response import Response
 from rest_framework import status
@@ -9,6 +11,7 @@ from .models import (
     Asset,
     Shipment,
     ShipmentItem,
+    ShipmentStatusEvent,
 )
 from .serializers import (
     CarrierContactSerializer,
@@ -18,6 +21,7 @@ from .serializers import (
     AssetSerializer,
     ShipmentSerializer,
     ShipmentItemSerializer,
+    ShipmentStatusEventSerializer,
 )
 from rest_framework.generics import ListCreateAPIView, RetrieveUpdateDestroyAPIView
 from rest_framework.viewsets import ModelViewSet
@@ -136,3 +140,15 @@ class ShipmentItemViewSet(ModelViewSet):
         .order_by("id")
     )
     serializer_class = ShipmentItemSerializer
+
+
+class ShipmentStatusEventViewSet(ModelViewSet):
+    serializer_class = ShipmentStatusEventSerializer
+
+    def get_queryset(self) -> BaseManager[ShipmentStatusEvent]:
+        return ShipmentStatusEvent.objects.filter(
+            shipment_id=self.kwargs["shipment_pk"]
+        )
+
+    def get_serializer_context(self) -> dict[str, Any]:
+        return {"shipment_id": self.kwargs["shipment_pk"]}

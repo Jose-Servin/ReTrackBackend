@@ -323,3 +323,16 @@ class ShipmentItemSerializer(serializers.ModelSerializer):
             "created_at",
             "updated_at",
         ]
+
+
+class ShipmentStatusEventSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = ShipmentStatusEvent
+        fields = ["id", "status", "event_timestamp", "source", "notes"]
+
+    def create(self, validated_data) -> ShipmentStatusEvent:
+        shipment_id = self.context["shipment_id"]
+        return ShipmentStatusEvent.objects.create(
+            shipment_id=shipment_id, **validated_data
+        )
