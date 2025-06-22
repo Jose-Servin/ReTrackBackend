@@ -123,6 +123,16 @@ class ShipmentItemViewSet(ModelViewSet):
     """
 
     queryset = (
-        ShipmentItem.objects.all().select_related("shipment", "asset").order_by("id")
+        ShipmentItem.objects.all()
+        .select_related(
+            "shipment",
+            "shipment__origin",
+            "shipment__destination",
+            "shipment__carrier",
+            "shipment__driver",
+            "shipment__vehicle",
+            "asset",
+        )
+        .order_by("id")
     )
     serializer_class = ShipmentItemSerializer

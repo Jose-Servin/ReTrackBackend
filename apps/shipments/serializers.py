@@ -11,6 +11,8 @@ from .models import (
     ShipmentStatusEvent,
 )
 
+from ..locations.models import Location
+
 
 class SimpleCarrierSerializer(serializers.ModelSerializer):
     class Meta:
@@ -268,14 +270,53 @@ class ShipmentSerializer(serializers.ModelSerializer):
         return data
 
 
+class SimpleAssetSerializer(serializers.ModelSerializer):
+    """
+    A simple serializer for Asset, used in ShipmentItem.
+    """
+
+    class Meta:
+        model = Asset
+        fields = [
+            "name",
+            "weight_lb",
+        ]
+
+
+class SimpleLocationSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Location
+        fields = ["name"]
+
+
+class SimpleShipmentSerializer(serializers.ModelSerializer):
+    """
+    A simple serializer for Shipment, used in ShipmentItem.
+    """
+
+    origin = SimpleLocationSerializer(read_only=True)
+    destination = SimpleLocationSerializer(read_only=True)
+
+    class Meta:
+        model = Shipment
+        fields = [
+            "origin",
+            "destination",
+        ]
+
+
 class ShipmentItemSerializer(serializers.ModelSerializer):
+    associated_asset = SimpleAssetSerializer(read_only=True, source="asset")
+    associated_shipment = SimpleShipmentSerializer(read_only=True, source="shipment")
 
     class Meta:
         model = ShipmentItem
         fields = [
             "id",
-            "shipment",
-            "asset",
+            "shipment",  # This field is used for creating/updating the item
+            "associated_shipment",  # Read-only field for the shipment details
+            "asset",  # This field is used for creating/updating the item
+            "associated_asset",  # Read-only field for the asset details
             "quantity",
             "unit_weight_lb",
             "notes",
