@@ -33,17 +33,29 @@ mc_number_validator = RegexValidator(
 
 class Carrier(models.Model):
     """
-    Represents a freight carrier company.
+    Represents a freight carrier company responsible for managing shipments and associated drivers.
 
     Attributes:
         name (str): The carrier's name.
-        mc_number (str): The carrier's motor carrier number.
-        created_at (datetime): Timestamp when the carrier was created.
-        updated_at (datetime): Timestamp when the carrier was last updated.
+        mc_number (str): The carrier's Motor Carrier (MC) number. Must be unique
+            (case-insensitive and whitespace-trimmed).
+        created_at (datetime.datetime): Timestamp when the carrier record was created.
+        updated_at (datetime.datetime): Timestamp of the last update to the carrier record.
 
     Properties:
-        available_drivers (int): Number of drivers linked to this carrier.
-        capacity_status (str): A label describing driver availability as Under, At, or Over Capacity.
+        available_drivers (int): Number of drivers linked to this carrier via a reverse relationship.
+        capacity_status (str): Label describing driver availability as one of:
+            - "Under Capacity" (0-1 drivers)
+            - "At Capacity" (2-3 drivers)
+            - "Over Capacity" (4+ drivers)
+
+    Methods:
+        clean():
+            Validates that the `mc_number` is unique across all carriers,
+            ignoring case and surrounding whitespace.
+
+        save(*args, **kwargs):
+            Normalizes the `mc_number`, runs full validation, and saves the instance.
     """
 
     name = models.CharField(max_length=255)
@@ -110,22 +122,29 @@ class Carrier(models.Model):
 
 class CarrierContact(models.Model):
     """
-    Represents a point of contact for a carrier.
+    Represents a point of contact for a specific carrier.
 
     Attributes:
-        carrier (ForeignKey): The carrier this contact is associated with.
+        carrier (Carrier): The carrier this contact is associated with.
         first_name (str): First name of the contact.
         last_name (str): Last name of the contact.
-        email (str): Unique email address for the contact.
-        phone_number (PhoneNumberField): Optional phone number in US format.
-        role (str): The contact's role (e.g., Owner, Dispatch, Billing, Safety).
-        is_primary (bool): Indicates if this is the primary contact for the carrier.
-        created_at (datetime): Timestamp when the contact was created.
-        updated_at (datetime): Timestamp when the contact was last updated.
+        email (str): Unique email address for the contact. Enforced as lowercase.
+        phone_number (str or None): Optional US-formatted phone number (e.g., "832-123-4567").
+        role (str): The contact's role within the carrier organization. One of: "Owner", "Dispatch", "Billing", "Safety".
+        is_primary (bool): Indicates if this contact is the primary point of contact for the carrier.
+        created_at (datetime.datetime): Timestamp when the contact was created.
+        updated_at (datetime.datetime): Timestamp when the contact was last updated.
 
     Constraints:
-        - Only one primary contact is allowed per carrier.
-        - Enforced both at the database level and through form validation via clean().
+        - Only one primary contact (`is_primary=True`) is allowed per carrier.
+        - This is enforced at both the database level (via UniqueConstraint) and the application level (via `clean()`).
+
+    Methods:
+        clean():
+            Validates that no other primary contact exists for the same carrier.
+
+        save(*args, **kwargs):
+            Normalizes the phone number (removes dashes) and email (lowercased), then saves the instance.
     """
 
     class Role(models.TextChoices):
@@ -192,11 +211,15 @@ class Driver(models.Model):
     Attributes:
         first_name (str): First name of the driver.
         last_name (str): Last name of the driver.
-        phone_number (str): Optional phone number.
-        email (str): Unique email address for the driver.
-        carrier (ForeignKey): The carrier this driver is associated with.
-        created_at (datetime): Timestamp when the driver was created.
-        updated_at (datetime): Timestamp when the driver was last updated.
+        phone_number (str or None): Optional US-formatted phone number (e.g., "832-123-4567").
+        email (str): Unique email address for the driver. Stored in lowercase for case-insensitive uniqueness.
+        carrier (Carrier): The carrier this driver is associated with.
+        created_at (datetime.datetime): Timestamp when the driver record was created.
+        updated_at (datetime.datetime): Timestamp of the last update to the driver record.
+
+    Methods:
+        save(*args, **kwargs):
+            Normalizes the phone number (removes dashes) and email (lowercased), then saves the instance.
     """
 
     first_name = models.CharField(max_length=255)
@@ -233,12 +256,16 @@ class Vehicle(models.Model):
     Represents a vehicle owned or operated by a carrier.
 
     Attributes:
-        carrier (ForeignKey): The carrier that owns or operates this vehicle.
+        carrier (Carrier): The carrier that owns or operates this vehicle.
         plate_number (str): Unique license plate identifier for the vehicle.
-            - Must consist of letters, numbers, or hyphens (no spaces or symbols).
-            - Accepts lowercase on input, but automatically normalized to uppercase on save.
-        created_at (datetime): Timestamp when the vehicle record was created.
-        updated_at (datetime): Timestamp when the vehicle record was last updated.
+            Must consist of letters, numbers, or hyphens (no spaces or special characters).
+            Input is case-insensitive; automatically normalized to uppercase on save.
+        created_at (datetime.datetime): Timestamp when the vehicle record was created.
+        updated_at (datetime.datetime): Timestamp of the last update to the vehicle record.
+
+    Methods:
+        save(*args, **kwargs):
+            Normalizes the `plate_number` to uppercase and saves the instance.
     """
 
     carrier = models.ForeignKey(
@@ -262,31 +289,32 @@ class Vehicle(models.Model):
 
 class Asset(models.Model):
     """
-    Represents a physical item or good that can be shipped.
+    Represents a physical item or product that can be shipped.
 
     Attributes:
-        name (str): The name or identifier of the asset.
-        slug (SlugField): A URL-friendly label used to reference the asset.
-            - Automatically generated from the name if not provided.
-            - Must be unique.
-        description (str): Optional detailed information about the asset.
-        weight_lb (Decimal): The weight of a single unit in pounds.
-            - Must be greater than 0.
-        length_in (Decimal): The length of the asset in inches.
-        width_in (Decimal): The width of the asset in inches.
-        height_in (Decimal): The height of the asset in inches.
-            - All dimensions must be greater than 0.
-        is_fragile (bool): Indicates whether the asset requires special handling due to fragility.
-        is_hazardous (bool): Indicates whether the asset is considered hazardous material.
-            - Items may be both fragile and hazardous in certain use cases.
-
-        created_at (datetime): Timestamp when the asset was first created.
-        updated_at (datetime): Timestamp of the most recent update to the asset.
+        name (str): The name or human-readable identifier of the asset.
+        sku (str): A unique, case-insensitive stock-keeping unit. Normalized to uppercase on save.
+        description (str): Optional detailed description of the asset.
+        slug (str): A unique, URL-friendly identifier auto-generated from `name` on create.
+        weight_lb (Decimal): Weight of a single unit in pounds. Must be greater than 0.
+        length_in (Decimal): Length of the item in inches. Must be greater than 0.
+        width_in (Decimal): Width of the item in inches. Must be greater than 0.
+        height_in (Decimal): Height of the item in inches. Must be greater than 0.
+        is_fragile (bool): Indicates whether the item is fragile and needs special handling.
+        is_hazardous (bool): Indicates whether the item contains hazardous material.
+        created_at (datetime.datetime): Timestamp when the asset was created.
+        updated_at (datetime.datetime): Timestamp of the most recent update to the asset.
 
     Properties:
-        volume_cubic_in (Decimal): The total volume of the item in cubic inches.
-        needs_special_handling (bool): True if the item is both fragile and hazardous,
-            which may require custom handling, packaging, or compliance workflows.
+        volume_cubic_in (Decimal): Computed volume in cubic inches (L × W × H).
+        needs_special_handling (bool): Returns `True` if the item is both fragile and hazardous.
+
+    Methods:
+        clean():
+            Validates that the SKU is unique (case-insensitive) across all assets.
+
+        save(*args, **kwargs):
+            Normalizes the SKU to uppercase, runs full validation, and saves the asset.
     """
 
     name = models.CharField(max_length=255)
@@ -375,28 +403,32 @@ class ShipmentStatusEvent(models.Model):
     Represents a lifecycle event in the status history of a shipment.
 
     Attributes:
-        shipment (ForeignKey): The shipment associated with this event.
-        status (str): The status value at this point in time (e.g., Pending, In Transit, Delivered).
-        event_timestamp (datetime): When the event occurred (can be backfilled or real-time).
-        source (str): Optional system or user responsible for the event.
-        notes (str): Optional note related to a particular event.
-        created_at (datetime): When the record was created.
-        updated_at (datetime): When the record was last updated.
+        shipment (Shipment): The shipment associated with this status event.
+        status (str): The shipment status at the time of the event. One of:
+            "Pending", "In Transit", "Delivered", "Delayed", or "Cancelled".
+        event_timestamp (datetime.datetime): The time the event occurred. Can be historical or real-time.
+        source (str or None): Optional system or user that triggered the event.
+        notes (str or None): Optional notes providing context for the event.
+        created_at (datetime.datetime): Timestamp when the event record was created.
+        updated_at (datetime.datetime): Timestamp of the most recent update to the event record.
 
     Constraints:
-        - (shipment, status, event_timestamp) must be unique.
-        - Events are ordered chronologically by event_timestamp.
+        - Each (shipment, status, event_timestamp) tuple must be unique.
+        - Events are ordered chronologically by `event_timestamp`.
 
-    Validation:
-        - Ensures new events are not recorded with timestamps earlier than the latest event
-            for the same shipment (chronological integrity).
-        - Proactively checks for duplicates and raises a friendly validation error before
-            database-level constraints are triggered.
+    Methods:
+        clean():
+            Validates:
+            - The event timestamp must not precede the latest existing event for the shipment.
+            - No duplicate status events (same shipment, status, and timestamp).
+
+        __str__():
+            Returns a human-readable label like "In Transit @ 06/24 13:45 (Shipment #42)".
 
     Notes:
-        This model serves as the single source of truth for tracking all status changes
-        in a shipment's lifecycle. Validation occurs both at the model level (via clean)
-        and at the database level (via UniqueConstraint) to ensure consistency and enforce business rules.
+        This model is the single source of truth for a shipment's status history.
+        Validation occurs at both the application level (`clean()`) and database level
+        (`UniqueConstraint`) to ensure chronological integrity and prevent duplicates.
     """
 
     class Status(models.TextChoices):
@@ -474,30 +506,36 @@ class Shipment(models.Model):
     Represents a shipment of goods from an origin to a destination.
 
     Attributes:
-        origin (ForeignKey): The origin location of the shipment.
-        destination (ForeignKey): The destination location of the shipment.
-        scheduled_pickup (datetime): Planned pickup time.
-        scheduled_delivery (datetime): Planned delivery time.
-        actual_pickup (datetime): Actual pickup time, inferred from status events.
-        actual_delivery (datetime): Actual delivery time, inferred from status events.
-        carrier (ForeignKey): The carrier responsible for the shipment.
-        driver (ForeignKey): The assigned driver.
-        vehicle (ForeignKey): The assigned vehicle.
-        created_at (datetime): Timestamp when the shipment was created.
-        updated_at (datetime): Timestamp when the shipment was last updated.
+        origin (Location): The origin location of the shipment.
+        destination (Location): The destination location of the shipment.
+        scheduled_pickup (datetime.datetime): Planned pickup datetime.
+        scheduled_delivery (datetime.datetime): Planned delivery datetime.
+        actual_pickup (datetime.datetime or None): Actual pickup time, typically inferred from status events.
+        actual_delivery (datetime.datetime or None): Actual delivery time, typically inferred from status events.
+        carrier (Carrier or None): The carrier assigned to fulfill the shipment.
+        driver (Driver or None): The driver assigned to handle the shipment.
+        vehicle (Vehicle or None): The vehicle assigned to transport the shipment.
+        created_at (datetime.datetime): Timestamp when the shipment record was created.
+        updated_at (datetime.datetime): Timestamp of the most recent update to the shipment.
 
     Properties:
-        current_status (str): The most recent shipment status, derived from related status events.
+        current_status (str): The most recent status of the shipment, derived from related status events.
+            Defaults to "Pending" if no events exist.
 
     Methods:
-        record_status_event(): Logs a new ShipmentStatusEvent and updates actual pickup/delivery timestamps as needed.
+        clean():
+            Validates business rules:
+            - Scheduled delivery must occur after scheduled pickup.
+            - Actual delivery must occur after actual pickup.
+            - Assigned driver and vehicle must belong to the assigned carrier.
+            - Origin and destination must be different.
 
-    Validation:
-        - Ensures scheduled delivery does not occur before scheduled pickup.
-        - Ensures actual delivery does not occur before actual pickup.
+        record_status_event(new_status, source=None, event_timestamp=None) -> ShipmentStatusEvent:
+            Creates a new status event for the shipment and updates actual pickup/delivery timestamps
+            if applicable (e.g., sets actual_pickup on first In Transit event).
 
     Meta:
-        Default ordering is by scheduled pickup time (ascending).
+        ordering: Shipments are ordered by scheduled pickup time (ascending).
     """
 
     scheduled_pickup = models.DateTimeField()
@@ -627,28 +665,30 @@ class ShipmentItem(models.Model):
     Represents a specific asset included in a shipment.
 
     Attributes:
-        shipment (ForeignKey): The shipment this item belongs to.
-            - Deleting the shipment will also delete this item.
-        asset (ForeignKey): The asset being shipped.
-            - Protected to prevent deletion if referenced by any shipment item.
-        quantity (int): The number of units of the asset included in the shipment.
-            - Must be 1 or greater.
-        unit_weight_lb (Decimal): The recorded weight per unit at the time of shipment, in pounds.
-            - Must be a positive number.
-            - This is intended to be a snapshot of the asset's weight at the time of shipment.
-        notes (str): Optional notes related to this shipment item (e.g., "damaged packaging").
+        shipment (Shipment): The shipment this item belongs to. Deleting the shipment will also delete the item.
+        asset (Asset): The asset being shipped. Deletion of the asset is protected if referenced by a shipment item.
+        quantity (int): The number of units of the asset in the shipment. Must be at least 1.
+        unit_weight_lb (Decimal or None): The recorded weight per unit at the time of shipment (in pounds).
+            This is a snapshot for historical accuracy and may differ from the current asset weight.
+        notes (str or None): Optional notes related to this shipment item (e.g., "damaged packaging").
+        created_at (datetime.datetime): Timestamp when the shipment item was created.
+        updated_at (datetime.datetime): Timestamp of the most recent update to the shipment item.
 
     Properties:
-        total_weight (Decimal): The total weight for this line item (quantity * unit weight).
+        total_weight (Decimal): Computed total weight (quantity × unit_weight_lb).
 
-    Validation:
-        - Quantity must be at least 1.
-        - Unit weight must be greater than 0.
-        - These checks are enforced via field-level validators and a clean() method for better messaging.
+    Methods:
+        clean():
+            Performs model-level validation:
+            - Quantity must be at least 1.
+            - Unit weight must be a positive value (enforced via field-level validators).
+
+        save(*args, **kwargs):
+            Automatically snapshots the asset's current weight into `unit_weight_lb` if not already set.
 
     Notes:
         This model stores a denormalized unit weight to preserve historical accuracy,
-        even if the asset's weight changes in the future.
+        even if the asset definition changes after the shipment is recorded.
     """
 
     shipment = models.ForeignKey(
