@@ -1,3 +1,4 @@
+import uuid
 from decimal import Decimal
 from typing import Literal
 from autoslug import AutoSlugField
@@ -8,62 +9,80 @@ from django.core.validators import MinValueValidator
 from django.core.validators import RegexValidator
 from django.db.models import Q, CheckConstraint
 from django.db.models.functions import Upper
-
-
-plate_validator = RegexValidator(
-    regex=r"^[A-Za-z0-9-]{1,20}$",
-    message="Enter a valid plate number using letters, numbers, or hyphens only (no spaces or special characters).",
-)
-phone_validator = RegexValidator(
-    regex=r"^\d{3}-?\d{3}-?\d{4}$",
-    message="Enter a 10-digit phone number in format 555-123-4567 or 5551234567.",
-)
-
-sku_validator = RegexValidator(
-    regex=r"^[aA][sS][tT]\d{4}$",
-    message="SKU must be in the format 'AST' followed by 4 digits (e.g., AST0001).",
-)
-
-
-mc_number_validator = RegexValidator(
-    regex=r"^[mM][cC]\d{6}$",
-    message="MC number must be in the format 'MC' followed by 6 digits (e.g., MC123456).",
+from .validators import (
+    plate_validator,
+    phone_validator,
+    sku_validator,
+    mc_number_validator,
 )
 
 
 class Carrier(models.Model):
     """
-    Represents a freight carrier company responsible for managing shipments and associated drivers.
+    Represents a freight carrier in ReTrackLogistics.
 
-    Attributes:
-        name (str): The carrier's name.
-        mc_number (str): The carrier's Motor Carrier (MC) number. Must be unique
-            (case-insensitive and whitespace-trimmed).
-        created_at (datetime.datetime): Timestamp when the carrier record was created.
-        updated_at (datetime.datetime): Timestamp of the last update to the carrier record.
+    Designed to support both operational workflows and future data engineering use cases,
+    including ingestion traceability, warehouse modeling, and reconciliation.
+
+    Fields:
+        name (str): Human-readable carrier name.
+        mc_number (str): Unique Motor Carrier number (case-insensitive, trimmed).
+        external_id (str): Optional ID from external systems (e.g., CRM, ERP).
+        status (str): Operational state — Active, Suspended, or Terminated.
+        mc_verified (bool): Flag indicating MC number was externally validated.
+        created_by_system (str): Source system or method that created the record.
+        created_at / updated_at (datetime): Timestamps for record lifecycle.
 
     Properties:
-        available_drivers (int): Number of drivers linked to this carrier via a reverse relationship.
-        capacity_status (str): Label describing driver availability as one of:
-            - "Under Capacity" (0-1 drivers)
-            - "At Capacity" (2-3 drivers)
-            - "Over Capacity" (4+ drivers)
+        available_drivers (int): Count of assigned drivers.
+        capacity_status (str): Driver count label — Under, At, or Over Capacity.
 
     Methods:
-        clean():
-            Validates that the `mc_number` is unique across all carriers,
-            ignoring case and surrounding whitespace.
+        clean(): Enforces uniqueness of normalized `mc_number`.
+        save(): Normalizes fields and triggers validation.
 
-        save(*args, **kwargs):
-            Normalizes the `mc_number`, runs full validation, and saves the instance.
+    Note:
+        This model is raw-layer aware and can be extended with ingestion audit logs.
     """
+
+    CREATED_BY_SYSTEM_PREFIXES = {
+        "CRM System": "CRM_",
+        "Manual Entry": "M_",
+        "Partner API": "API_",
+        "Legacy Migration": "LM_",
+    }
 
     name = models.CharField(max_length=255)
     mc_number = models.CharField(max_length=50, validators=[mc_number_validator])
-    # TODO: replace with FK to core.User when model is defined
-    # account_managers
+    external_id = models.CharField(
+        max_length=100,
+        editable=False,
+        unique=True,
+        help_text="System-generated UUID with a source-specific prefix (e.g., CRM_, API_, etc.)",
+    )
+
+    class CarrierStatus(models.TextChoices):
+        ACTIVE = "Active", "Active"
+        SUSPENDED = "Suspended", "Suspended"
+        TERMINATED = "Terminated", "Terminated"
+
+    status = models.CharField(
+        max_length=50,
+        choices=CarrierStatus.choices,
+        default=CarrierStatus.ACTIVE,
+    )
+    mc_verified = models.BooleanField(default=False)
+    created_by_system = models.CharField(
+        max_length=100,
+        choices=[(key, key) for key in CREATED_BY_SYSTEM_PREFIXES.keys()],
+        help_text="Source system or method that created this record",
+    )
+
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+    deleted_at = models.DateTimeField(
+        null=True, blank=True, help_text="Timestamp when this record was soft-deleted."
+    )
 
     class Meta:
         ordering = ["name"]
@@ -72,13 +91,30 @@ class Carrier(models.Model):
         return self.name
 
     def save(self, *args, **kwargs):
-        self.full_clean()  # Triggers `clean()` before saving
+        self.full_clean()  # Run validation first (calls `clean()`)
+
         if self.mc_number:
             self.mc_number = self.mc_number.upper().strip()
+
+        if not self.external_id:
+            # At this point, created_by_system is already validated in clean()
+            prefix = self.__class__.CREATED_BY_SYSTEM_PREFIXES[self.created_by_system]
+            self.external_id = f"{prefix}{uuid.uuid4().hex}"
+
         super().save(*args, **kwargs)
 
     def clean(self):
         super().clean()
+
+        if (
+            not self.created_by_system
+            or self.created_by_system not in self.__class__.CREATED_BY_SYSTEM_PREFIXES
+        ):
+            raise ValidationError(
+                {
+                    "created_by_system": "Must be one of: CRM System, Manual Entry, Partner API, or Legacy Migration"
+                }
+            )
 
         if self.mc_number:
             # Normalize to match how the uniqueness constraint is enforced
