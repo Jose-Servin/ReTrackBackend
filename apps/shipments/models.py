@@ -53,15 +53,11 @@ class Carrier(models.Model):
     }
 
     name = models.CharField(max_length=255)
-    mc_number = models.CharField(
-        max_length=50,
-        validators=[mc_number_validator],
-        db_index=True,
-    )
+    mc_number = models.CharField(max_length=50, validators=[mc_number_validator])
     external_id = models.CharField(
         max_length=100,
-        unique=True,
         editable=False,
+        unique=True,
         help_text="System-generated UUID with a source-specific prefix (e.g., CRM_, API_, etc.)",
     )
 
@@ -84,6 +80,9 @@ class Carrier(models.Model):
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+    deleted_at = models.DateTimeField(
+        null=True, blank=True, help_text="Timestamp when this record was soft-deleted."
+    )
 
     class Meta:
         ordering = ["name"]
